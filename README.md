@@ -62,7 +62,7 @@ You can run the snakemake based make file:
 
 `snakemake -s make.smk.py --config boost=<boost> -j 1 -p`
 
-where `<boost>` is the location of boost_install/include folder. 
+where `<boost>` is the location of boost_install/include folder OR your local boost install already in the path. 
 
 Most likely `{anaconda install}/envs/{proj_env}/include`.
 
