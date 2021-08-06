@@ -46,9 +46,9 @@ If available, provide repeat mask annotation (--repeatMask, -r) for the referenc
     parser.add_argument("--mq", help="Min MapQ for reads", default=10)
     parser.add_argument("--outdir", help="Output directory",required=True)
 #    parser.add_argument("--configfile", help="provide config json ")
-  #  parser.add_argument("--index",help="index file of reference",default="annotation/hg38.fa.fai")
+    parser.add_argument("--index",help="index file of reference",default="annotation/hg38.fa.fai")
 
- #   parser.add_argument("--repeatMask",help="Provide reference based repeat bed file.", default="annotation/repeatMask.merged.bed")
+    parser.add_argument("--repeatMask",help="Provide reference based repeat bed file.", default="annotation/repeatMask.merged.bed")
     SMK = f"{DIR}/caller.smk"
 
 

@@ -10,8 +10,19 @@ import json
 
 RD = config["scr"]
 
-ASM=RD+"/annotation/hg38.fa.fai"
-REP=RD+"/annotation/repeatMask.merged.bed"
+
+if "repeatMask" in config:
+    REP=config['repeatMask']
+else:
+    REP=RD+"/annotation/repeatMask.merged.bed"
+
+if "index" in config:
+    ASM=config['index']
+else:
+    ASM=RD+"/annotation/hg38.fa.fai"
+
+
+
 GEN=RD+"/annotation/gencode.gene.bed"
 
 #config("hmm_caller.json")
