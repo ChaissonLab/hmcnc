@@ -1,5 +1,5 @@
 # hmcnc - Hidden Markov Copy Number Caller 
-## Pipeline for calling CNVs in assemblies or alignments
+## Pipeline for calling CNVs in assemblies or alignments using Read depth 
 
 ---
  
