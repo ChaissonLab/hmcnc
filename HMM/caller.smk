@@ -12,7 +12,7 @@ RD = config["scr"]
 
 
 if "r" in config:
-    REP=config['repeatMask']
+    REP=config['r']
 else:
     REP=RD+"/annotation/repeatMask.merged.bed"
 
