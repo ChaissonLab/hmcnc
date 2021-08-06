@@ -11,7 +11,7 @@ import json
 RD = config["scr"]
 
 
-if "repeatMask" in config:
+if "r" in config:
     REP=config['repeatMask']
 else:
     REP=RD+"/annotation/repeatMask.merged.bed"
