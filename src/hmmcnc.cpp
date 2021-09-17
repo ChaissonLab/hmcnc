@@ -33,16 +33,16 @@ using std::cout;
 using std::endl;
 using std::string;
 using std::log;
-
-int BIN_LENGTH=100;
-int MIN_CLIP_LENGTH=500;
-int MAX_CN=6;
-float MISMAP_RATE=0.01;
 using namespace std;
-double lepsi=-800;
-double minNeg=-1*numeric_limits<double>::epsilon();
 
-void Moments(vector<double> &v, double &ex, double &var) {
+const int BIN_LENGTH=100;
+const int MIN_CLIP_LENGTH=500;
+const float MISMAP_RATE=0.01;
+const double minNeg=-1*numeric_limits<double>::epsilon();
+int MAX_CN=6;
+double lepsi=-800;
+
+void Moments(const vector<double> &v, double &ex, double &var) {
   ex=0;
   for (int i=0; i < v.size(); i++) {
     ex+=v[i]*i;
@@ -75,18 +75,18 @@ void Reset(vector<vector<double> > &v) {
   }
 }
 
-double oned = 1.0;
-double ONE = log(oned - 1e-10);
-double epsilon = 0.00000000001;
+const double oned = 1.0;
+const double ONE = log(oned - 1e-10);
+const double epsilon = 0.00000000001;
 double PairSumOfLogP(double a, double b) {
   double res = b;
   if (a != 0) {
-    double m = max(a, b);
+    const double m = max(a, b);
 
     assert(a <= 0);
-    double diff = min(a,b) - m;
-    double e = exp(diff);
-    double lg=log(1+e);
+    const double diff = min(a,b) - m;
+    const double e = exp(diff);
+    const double lg=log(1+e);
     res      = m + lg;
     assert(res < epsilon);
     if (res > 0 and res < epsilon ) {
@@ -100,7 +100,7 @@ double PairSumOfLogP(double a, double b) {
   return res;
 }
 
-double SumOfLogP(vector<double> &vals) {
+double SumOfLogP(const vector<double> &vals) {
   if (vals.size() == 0) {
     // Return 0 for error.
     return 0;
@@ -129,7 +129,7 @@ class ThreadInfo {
 public:
   htsFile *htsfp;
   hts_idx_t *bamidx;
-  bam_hdr_t *samHeader;			
+  bam_hdr_t *samHeader;
   faidx_t *fai;
   int *lastSeq;
   string refFileName;
@@ -138,7 +138,7 @@ public:
   vector<int>    *contigLengths;
   vector<int> procChroms;
   vector<vector<int> > *covBins;
-  vector<vector<int> > *clipBins;  
+  vector<vector<int> > *clipBins;
   vector<vector<SNV> > *snvs;
   vector<vector<int> > *copyNumber;
   vector<vector<double> > *transP, *emisP, *expTransP, *expEmisP;
@@ -156,9 +156,9 @@ public:
 };
 
 //
-// Not super 
-void ReadCoverage(string &covFileName,
-		  vector<string> &contigNames,
+// Not super
+void ReadCoverage(const string &covFileName,
+		  const vector<string> &contigNames,
 		  vector<vector<int> > &covBins) {
   ifstream covFile(covFileName.c_str());
   string chrom="", curChrom;
@@ -172,7 +172,7 @@ void ReadCoverage(string &covFileName,
   char *buffer = new char[length];    // allocate memory for a buffer of appropriate dimension
   covFile.read(buffer, length);       // read the whole file into the buffer
   cerr << "read cov buffer of len " << length << endl;
-  covFile.close();  
+  covFile.close();
   int i=0;
   string contigName("");
   int curContig=0;
@@ -181,7 +181,7 @@ void ReadCoverage(string &covFileName,
   }
   while (i < length) {
     while (i < length and isspace(buffer[i])) { i++; }
-    int c=i;    
+    int c=i;
     while (i < length and isspace(buffer[i]) == false)  { i++; }
     if (i < length) {
       if (i-c > contigName.size()) { contigName.resize(i-c);}
@@ -193,12 +193,12 @@ void ReadCoverage(string &covFileName,
       end=atoi(&buffer[i]);
       while(i < length and buffer[i] != '\t') { i++;}
       cov=atoi(&buffer[i]);
-      i++;      
+      i++;
       //      sscanf(&buffer[i], "%d	%d	%d", &start, &end, &cov);
       if (contigName != contigNames[curContig]) {
 	covBins.push_back(vector<int>());
 	curContig++;
-	cerr << "i " << i << "\t" << curContig << endl;	
+	cerr << "i " << i << "\t" << curContig << endl;
       }
       covBins[curContig].push_back(cov);
     }
@@ -207,9 +207,9 @@ void ReadCoverage(string &covFileName,
 }
 
 
-void WriteSNVs(string &snvFileName,
-	       vector<string> &contigNames,	       
-	       vector<vector<SNV > > &snvs) {
+void WriteSNVs(const string &snvFileName,
+	       const vector<string> &contigNames,
+	       const vector<vector<SNV > > &snvs) {
 
   ofstream snvOut(snvFileName.c_str());
   for (int c=0; c < contigNames.size(); c++) {
@@ -220,7 +220,7 @@ void WriteSNVs(string &snvFileName,
 }
 
 void ReadSNVs(string &snvFileName,
-	      vector<string> &contigNames,
+	      const vector<string> &contigNames,
 	      vector<vector<SNV> > &snvs) {
   snvs.resize(contigNames.size());
   int curContig=0;
@@ -229,7 +229,7 @@ void ReadSNVs(string &snvFileName,
   string chrom;
   int pos, ref, alt;
   char refNuc, altNuc, t;
-  
+
   while (curContig < contigNames.size()) {
     snvIn >> chrom >> pos >> refNuc >> altNuc >> ref >> alt;
     if (chrom == "" or snvIn.eof()) { break;}
@@ -240,9 +240,9 @@ void ReadSNVs(string &snvFileName,
   }
 }
 
-void WriteCovBed(string &covFileName,
-		 vector<string> &contigNames,
-		 vector<vector<int> > &covBins) {
+void WriteCovBed(const string &covFileName,
+		 const vector<string> &contigNames,
+		 const vector<vector<int> > &covBins) {
   ofstream covFile(covFileName.c_str());
   for (int c=0; c < contigNames.size(); c++) {
     for (int i=0; i < covBins[c].size(); i++) {
@@ -251,7 +251,7 @@ void WriteCovBed(string &covFileName,
   }
 }
 
-static void printModel(vector<vector<double> > &transP, ostream *strm)
+static void printModel(const vector<vector<double> > &transP, ostream *strm)
 {
   *strm << "\nTRANS: \n";
   for (int r=0;r<transP.size();r++)
@@ -266,7 +266,7 @@ static void printModel(vector<vector<double> > &transP, ostream *strm)
   *strm << endl;
 }
 
-static void printEmissions(vector<vector<double> > &emisP, ostream *strm)
+static void printEmissions(const vector<vector<double> > &emisP, ostream *strm)
 
 {
   *strm << "\nEMIS: \n";
@@ -274,22 +274,22 @@ static void printEmissions(vector<vector<double> > &emisP, ostream *strm)
     *strm << std::setw(7) << i;
   }
   *strm << endl;
-  for (size_t r=0;r<emisP.size(); r++) 
+  for (size_t r=0;r<emisP.size(); r++)
     {
       for (size_t c=0;c<emisP[r].size(); c++ )
 	{
 	  *strm << std::setw(7) << std::setprecision(2) << emisP[r][c];
-	  if (c+1 < emisP[r].size()) 
+	  if (c+1 < emisP[r].size())
 	    {
 	      *strm << "\t";
-	    }	  
+	    }
 	}
       *strm << endl;
     }
 }
 
 
-double max_over_row(vector<vector<double> > &v , size_t col ,size_t nStates ){
+double max_over_row(const vector<vector<double> > &v , size_t col ,size_t nStates ){
 
   double maxi=-1 * (std::numeric_limits<double>::max()) ;
   for(size_t i=0;i< nStates;i++){
@@ -299,7 +299,7 @@ double max_over_row(vector<vector<double> > &v , size_t col ,size_t nStates ){
 }
 
 
-double max_over_rows(vector<vector<double> > &v , size_t col ,vector<vector<double> > &v2 , size_t nextState,size_t nStates ){
+double max_over_rows(const vector<vector<double> > &v , size_t col ,const vector<vector<double> > &v2 , size_t nextState,size_t nStates ){
   double maxi2=-1 * (std::numeric_limits<double>::max()) ;
 
   for(size_t i=0;i< nStates;i++){
@@ -319,12 +319,12 @@ double LgNegBinom(int cn, int cov, float Hmean, float Hvar) {
   //
   // Since actual variance is unknown at high copy number states, assume linear increase.
   //
-      
+
   if (Hmean==0) {//no alignment in contig
     if (cn!= 0)
       result=lepsi;
     else
-      result=0;    
+      result=0;
   }
   else if (cov >= MAX_CN*Hmean) {//max_obs filtered previously
     if(cn!= MAX_CN)
@@ -335,13 +335,13 @@ double LgNegBinom(int cn, int cov, float Hmean, float Hvar) {
   else if(cn==0){//del_states
     //
     // Use poisson for 0-state assuming it's a random mismap process.
-    poisson distribution(MISMAP_RATE*Hmean);
-    double prob=pdf(distribution, cov);
-    if (prob == 0) 
+    const poisson distribution(MISMAP_RATE*Hmean);
+    const double prob=pdf(distribution, cov);
+    if (prob == 0)
       {
 	result=lepsi;
       }
-    else 
+    else
       {
 	result=max(lepsi, log(prob));
       }
@@ -351,10 +351,10 @@ double LgNegBinom(int cn, int cov, float Hmean, float Hvar) {
     Hvar*=cn;
     p=Hmean/Hvar;
     r=Hmean*(Hmean/Hvar)/(1-Hmean/Hvar);
-    
-    negative_binomial_distribution<double> distribution(r,p);    
-    double prob=pdf(distribution, cov);
-    if (prob == 0) 
+
+    const negative_binomial_distribution<double> distribution(r,p);
+    const double prob=pdf(distribution, cov);
+    if (prob == 0)
       {
 	result=lepsi;
       }
@@ -364,19 +364,18 @@ double LgNegBinom(int cn, int cov, float Hmean, float Hvar) {
 
       }
   }
-  return result;  
+  return result;
 }
 
 double LgBinom(double p, int s, int n) {
-  binomial snv(n, p);
-  double pVal;
-  pVal=pdf(snv,s);
+  const binomial snv(n, p);
+  const double pVal=pdf(snv,s);
   if (pVal == 0) {
     return lepsi;
   }
   else {
-    double lP=log(pVal);
-    double retVal=max(lP, lepsi);
+    const double lP=log(pVal);
+    const double retVal=max(lP, lepsi);
     assert(isnan(lP) == 0);
     return retVal;
   }
@@ -404,25 +403,25 @@ double LgPrpoiss(int cn,  int cov, int Hmean) {
       result=0;
   }
   else if(cn==0){//del_states
-    poisson distribution(MISMAP_RATE*Hmean);
-    double prob=pdf(distribution, cov);
+    const poisson distribution(MISMAP_RATE*Hmean);
+    const double prob=pdf(distribution, cov);
     if (prob == 0) {
-      result = lepsi;      
+      result = lepsi;
     }
     else {
       result = max(lepsi, log(prob));
     }
   }
   else {
-    poisson distribution(cn*Hmean);
-    double prob=pdf(distribution, cov);
+    const poisson distribution(cn*Hmean);
+    const double prob=pdf(distribution, cov);
     if (prob == 0)
       {
 	result=lepsi;
       }
-    else 
+    else
       {
-	result=max(lepsi, log(prob));	
+	result=max(lepsi, log(prob));
       }
   }
   return result;
@@ -445,18 +444,18 @@ static void correctModel(vector<vector<double> > &transP,
     }
 }//correctModel
 
-void CombineEmissions( vector<int> &obs,
-		       vector<SNV> &snvs,
+void CombineEmissions( const vector<int> &obs,
+		       const vector<SNV> &snvs,
 		       vector<uint8_t> &isCov,
 		       vector<int> &obsIndex) {
-  int totObs=obs.size() + snvs.size();
+  const int totObs=obs.size() + snvs.size();
   isCov.resize(totObs);
   fill(isCov.begin(), isCov.end(), false);
   obsIndex.resize(totObs);
   fill(obsIndex.begin(), obsIndex.end(), -1);
   int c=0,s=0,p=0, obsi=0;
   while (c < obs.size() or s < snvs.size()) {
-    int curPos=c*100;
+    const int curPos=c*100;
     while (s < snvs.size() and snvs[s].pos < curPos) {
       isCov[obsi] = false;
       obsIndex[obsi] = s;
@@ -477,55 +476,55 @@ void CombineEmissions( vector<int> &obs,
 
 double CSEmisP(	int state,
 		int pos,
-		vector<int> &obs,
-		vector<SNV> &snvs,
-		vector<uint8_t> &isCov,
-		vector<int> &obsIndex,
-		vector<vector<double> > &emisP, 
-		vector<vector<vector<double> > > &binoP ) {
+		const vector<int> &obs,
+		const vector<SNV> &snvs,
+		const vector<uint8_t> &isCov,
+		const vector<int> &obsIndex,
+		const vector<vector<double> > &emisP,
+		const vector<vector<vector<double> > > &binoP ) {
   if (isCov[pos]) {
-    int covIndex=obsIndex[pos];
+    const int covIndex=obsIndex[pos];
     return emisP[state][obs[covIndex]];
   }
   else {
-    int snvIndex = obsIndex[pos];
-    int maxCov = emisP[0].size();
+    const int snvIndex = obsIndex[pos];
+    const int maxCov = emisP[0].size();
     int ref=snvs[snvIndex].ref;
     int alt=snvs[snvIndex].alt;
     int nucCov = ref+alt;
     if (nucCov > maxCov) {
-      double f=((double)maxCov)/nucCov;
+      const double f=((double)maxCov)/nucCov;
       ref=ref*f;
       alt=alt*f;
       nucCov=ref+alt;
     }
     assert(nucCov < binoP[state].size());
-    int m=min(ref,alt);
+    const int m=min(ref,alt);
     assert(m < binoP[state][nucCov].size());
     return binoP[state][nucCov][m];
   }
-}  
+}
 
-		      
 
-double ForwardBackwards( vector<double> &startP,
-			 vector<vector<double> > &covCovTransP,			 
-			 vector<vector<double> > &emisP,
-			 vector<int> &obs,
+
+double ForwardBackwards( const vector<double> &startP,
+			 const vector<vector<double> > &covCovTransP,
+			 const vector<vector<double> > &emisP,
+			 const vector<int> &obs,
 			 vector<vector<double> > &f,
 			 vector<vector<double> > &b) {
 
-  
-  int totObs    = obs.size();
-  int nCovObs   = obs.size();
-  int nCovStates = startP.size();
 
-  assert(nCovStates > 0);    
+  const int totObs    = obs.size();
+  const int nCovObs   = obs.size();
+  const int nCovStates = startP.size();
+
+  assert(nCovStates > 0);
   //
   // Eventually this can be done with logic in the code, but for now just store a
   // flag at each observation if it is an SNV or cov emission.
   //
-  
+
   //
   // Initialize first col from standing.
   //
@@ -537,19 +536,19 @@ double ForwardBackwards( vector<double> &startP,
   //
   f.resize(nCovStates);
   b.resize(nCovStates);
-  
+
   for (int i = 0; i < nCovStates; i++) {
     f[i].resize(totObs+1);
     fill(f[i].begin(), f[i].end(), 0);
     b[i].resize(totObs+1);
-    fill(b[i].begin(), b[i].end(), 0);    
+    fill(b[i].begin(), b[i].end(), 0);
   }
 
   for (int j=0; j < nCovStates; j++) {
     f[j][0] = log(1./nCovStates);
   }
-  
-  double lgthird=log(1/3.);
+
+  const double lgthird=log(1/3.);
   //
   // Shouldn't have 0 states. Even if the coverage is empty for
   // an entire chrom, should have 0 state.
@@ -565,10 +564,10 @@ double ForwardBackwards( vector<double> &startP,
   }
   int prevCovIdx=0, curCovIdx=0;
   int prevSNVIdx=0, curSNVIdx=0;
-  
+
   for (int k=0; k < totObs; k++) {
     for (int i=0; i < nCovStates; i++) {
-      double colSum=0;	
+      double colSum=0;
       for (int j=0; j < nCovStates; j++) {
 	assert(j== 0 or colSum != 0);
 	assert(j < f.size());
@@ -577,7 +576,7 @@ double ForwardBackwards( vector<double> &startP,
 	assert(i < covCovTransP[j].size());
 	colSum = PairSumOfLogP(colSum, f[j][k] + covCovTransP[j][i]);
       }
-      assert(obs[k] < emisP[i].size());      
+      assert(obs[k] < emisP[i].size());
       f[i][k+1] = colSum + emisP[i][obs[k]];
     }
   }
@@ -589,7 +588,7 @@ double ForwardBackwards( vector<double> &startP,
 
   for (int k = totObs-1; k > 0; k--) {
     for (int i=0; i < nCovStates; i++) {
-      double colSum=0;	
+      double colSum=0;
       for (int j=0; j < nCovStates; j++) {
 	assert(j== 0 or colSum != 0);
 	assert(prevCovIdx < obs.size()+1);
@@ -603,21 +602,20 @@ double ForwardBackwards( vector<double> &startP,
   for (int j=0; j < nCovStates; j++) {
     finalCol = PairSumOfLogP(finalCol, f[j][totObs]+log(1.0/nCovStates));
   }
-  return finalCol; 
+  return finalCol;
 }
 
-double BaumWelchEOnChrom(vector<double> &startP,
-			 vector<vector<double> > &covCovTransP,			 
+double BaumWelchEOnChrom(const vector<double> &startP,
+			 vector<vector<double> > &covCovTransP,
 			 vector<vector<double> > &emisP,
 			 vector<int> &obs,
 			 vector<vector<double> > &f,
 			 vector<vector<double> > &b,
 			 vector<vector<double> > &expCovCovTransP,
 			 vector<vector<double> > &expEmisP) {
-  int nStates = startP.size();
-  int nObs    = obs.size();
-  double px;
-  px = ForwardBackwards( startP, covCovTransP, emisP,
+  const int nStates = startP.size();
+  const int nObs    = obs.size();
+  const double px = ForwardBackwards( startP, covCovTransP, emisP,
 			 obs,
 			 f, b);
   /*
@@ -630,7 +628,7 @@ double BaumWelchEOnChrom(vector<double> &startP,
     for (int j=0; j < nStates; j++) {
       double p=f[j][k] + b[j][k+1];
       fbSum=PairSumOfLogP(fbSum, p);
-    }    
+    }
     for (int j=0; j < nStates; j++) {
       double p=f[j][k] + b[j][k+1];
       fb << std::setprecision(8) << f[j][k] << ", " << b[j][k+1] << ", " << f[j][k] + b[j][k+1];
@@ -646,7 +644,7 @@ double BaumWelchEOnChrom(vector<double> &startP,
   }
   fb.close();
 */
-    
+
   for (int k=1; k< nObs-1; k++) {
     double logSum=0;
     //
@@ -660,9 +658,9 @@ double BaumWelchEOnChrom(vector<double> &startP,
     }
     for (int i=0; i < covCovTransP.size(); i++) {
       for (int j=0; j < covCovTransP[i].size(); j++) {
-	double pEdge=f[i][k] + covCovTransP[i][j] + emisP[j][obs[k+1]] + b[j][k+1];
+	const double pEdge=f[i][k] + covCovTransP[i][j] + emisP[j][obs[k+1]] + b[j][k+1];
 	assert(isnan(exp(pEdge-logSum)) == false);
-	expCovCovTransP[i][j] += exp(pEdge - logSum);	  
+	expCovCovTransP[i][j] += exp(pEdge - logSum);
       }
     }
   }
@@ -686,21 +684,21 @@ double BaumWelchEOnChrom(vector<double> &startP,
       expEmisP[ei][pi] /= rowSum;
     }
   }
-  
+
   return px;
-  
+
 }
 
-void PrintIntervals(string chrom,
-		    vector<Interval> &intv,
+void PrintIntervals(const string chrom,
+		    const vector<Interval> &intv,
 		    ostream &out) {
   for (int i=0; i < intv.size(); i++) {
     out << chrom << "\t" << intv[i].start << "\t" << intv[i].end << "\t" << intv[i].copyNumber << "\t" << intv[i].averageCoverage << "\t" << intv[i].pVal << endl;
   }
 }
-void StorePosteriorMaxIntervals(vector<int> &cov,
-				vector<vector<double> > &f,
-				vector<vector<double> > &b,
+void StorePosteriorMaxIntervals(const vector<int> &cov,
+				const vector<vector<double> > &f,
+				const vector<vector<double> > &b,
 				vector<Interval> &intervals) {
   intervals.resize(0);
   int i=0;
@@ -721,7 +719,7 @@ void StorePosteriorMaxIntervals(vector<int> &cov,
     totCov+=cov[i];
     colSum=f[0][i] + b[0][i];
     for (int j = 1; j < f.size(); j++) {
-      double v=f[j][i] + b[j][i];
+      const double v=f[j][i] + b[j][i];
       if (v > colMax) {
 	colMax=v;
 	colMaxCN=j;
@@ -750,11 +748,11 @@ void StorePosteriorMaxIntervals(vector<int> &cov,
 string version="0.8";
 string reference;
 void WriteVCF(ostream &out,
-	      string &refName,
-	      string &sampleName,
-	      vector<string> &contigNames,
-	      vector<int> &contigLengths,
-	      vector<vector<Interval> > &intervals) {
+	      const string &refName,
+	      const string &sampleName,
+	      const vector<string> &contigNames,
+	      const vector<int> &contigLengths,
+	      const vector<vector<Interval> > &intervals) {
   out << "##fileformat=VCFv4.1" << endl
       << "##source=hmmcnc_v" << version << endl
       << "##reference=" << reference << endl;
@@ -775,7 +773,7 @@ void WriteVCF(ostream &out,
       << "##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description=\"Imprecise "
     "structural variation\">"
       << endl;
-  out << "##FORMAT=<ID=CN,Number=1,Type=String,Description=\"CopyNumber\">" 
+  out << "##FORMAT=<ID=CN,Number=1,Type=String,Description=\"CopyNumber\">"
       << endl
       << "##FORMAT=<ID=PP,Number=R,Type=Float,Description=\"Relative posterior "
     "probability (phred)\">"
@@ -789,7 +787,7 @@ void WriteVCF(ostream &out,
     for (int i = 0; i < intervals[c].size(); i++) {
       if (intervals[c][i].copyNumber != 2) {
 
-        std::string cntype = (intervals[c][i].copyNumber > 2) ? "DUP" : "DEL";
+        const std::string cntype = (intervals[c][i].copyNumber > 2) ? "DUP" : "DEL";
 
         out << contigNames[c] << "\t" << intervals[c][i].start
             << "\t.\t<CNV>\t<CNV>\t30\t" << intervals[c][i].filter << "\t"
@@ -802,41 +800,41 @@ void WriteVCF(ostream &out,
             << endl;
       }
     }
-  }  
+  }
 }
-		       
+
 
 void UpdateEmisP(vector<vector<double> > &emisP,
 		 vector<vector<double> > &expEmisP,
 		 int model=NEG_BINOM) {
-  int nCovStates=emisP.size();
+  const int nCovStates=emisP.size();
   for (int i=1;i<nCovStates;i++) {
     double mean, var;
     Moments(expEmisP[i], mean, var);
-    int maxCov=expEmisP[i].size()-1;
+    const int maxCov=expEmisP[i].size()-1;
     double stateSum=0;
     emisP[i].resize(expEmisP[i].size());
     for (int j=0;j<=maxCov;j++) {
-      if (model == POIS or mean > var) {	
+      if (model == POIS or mean > var) {
 	emisP[i][j]=LgPrpoiss( (int) i , j , (int) mean );
 	stateSum+=exp(LgPrpoiss( (int) i , j , (int) mean ));
       }
       else  {
 	emisP[i][j]=LgNegBinom((int)i, (int) j, mean, var);
-	stateSum+=exp(LgNegBinom((int)i, (int) j, mean, var));	
-      }      
+	stateSum+=exp(LgNegBinom((int)i, (int) j, mean, var));
+      }
     }
   }
 }
 
-void BaumWelchM(vector<double> &startP,
-		vector<vector<double> > &transP,
-		vector<vector<double> > &emisP,
-		vector<vector<vector< double> > > &binoP,
+void BaumWelchM(const vector<double> &startP,
+		const vector<vector<double> > &transP,
+		const vector<vector<double> > &emisP,
+		const vector<vector<vector< double> > > &binoP,
 		int model,
-		vector<long> &stateTotCov,
-		vector<long> &stateNCov,
-		vector<vector<double> > &expTransP,
+		const vector<long> &stateTotCov,
+		const vector<long> &stateNCov,
+		const vector<vector<double> > &expTransP,
 		vector<vector<double> > &expEmisP,
 		vector<vector<double> > &covCovPrior,
 		vector<vector<double> > &updateTransP,
@@ -845,7 +843,7 @@ void BaumWelchM(vector<double> &startP,
   //
   // M step.
   //
-  int nStates=startP.size();
+  const int nStates=startP.size();
   updateTransP.resize(nStates);
   vector<double> colSums;
 
@@ -865,7 +863,7 @@ void BaumWelchM(vector<double> &startP,
     cerr << j;
     for (int k=0; k < nStates; k++) {
       updateTransP[j][k] = log(expTransP[j][k]/colSum); //min(ONE, expTransP[j][k] - colSum);
-      cerr << "\t" << std::setw(8) << updateTransP[j][k];      
+      cerr << "\t" << std::setw(8) << updateTransP[j][k];
     }
     cerr << endl;
   }
@@ -873,7 +871,7 @@ void BaumWelchM(vector<double> &startP,
   // M step for emissions -- use summary statistics to recompute emission values
   // Eventually to really be BW, this should fit a negative binomial dist to the data.
   //
-  updateEmisP.resize(nStates);  
+  updateEmisP.resize(nStates);
 
   vector<double> stateMean(nStates);
   for (int i=0; i < nStates; i++) {
@@ -884,23 +882,23 @@ void BaumWelchM(vector<double> &startP,
       stateMean[i] = 0;
     }
   }
-  int maxCov=emisP[0].size();
+  const int maxCov=emisP[0].size();
   UpdateEmisP(updateEmisP, expEmisP, model);
 }
-		
-  
 
-void viterbi( vector<double> &startP,
-	      vector<vector<double> > &covCovTransP,
-	      vector<vector<double> > &covSnvTransP,
-	      vector<vector<double> > &snvSnvTransP,
-	      vector<vector<double> > &emisP,
-	      vector<vector<vector<double> > > &binoP,
-	      vector<int> &cov,
-	      vector<SNV> &snvs,
-	      vector<uint8_t> &isCov,
-	      vector<int> &obsIndex,
-	      vector<int> & viterbiPath) {    
+
+
+void viterbi( const vector<double> &startP,
+	      const vector<vector<double> > &covCovTransP,
+	      const vector<vector<double> > &covSnvTransP,
+	      const vector<vector<double> > &snvSnvTransP,
+	      const vector<vector<double> > &emisP,
+	      const vector<vector<vector<double> > > &binoP,
+	      const vector<int> &cov,
+	      const vector<SNV> &snvs,
+	      const vector<uint8_t> &isCov,
+	      const vector<int> &obsIndex,
+	      vector<int> & viterbiPath) {
   /*
   //size_t  nObservations  = observations.size();
   size_t nObs=obsIndex.size();
@@ -910,7 +908,7 @@ void viterbi( vector<double> &startP,
   vector<vector<double> > v(nStates, vector<double>(nObs) );
   //  vector<vector<double> > f(nStates, vector<double>(observations.size()) );
   //  vector<vector<double> > b(nStates, vector<double>(observations.size()) );
-  vector<vector<double> > opt(nStates, vector<double>(nObs)  );  
+  vector<vector<double> > opt(nStates, vector<double>(nObs)  );
   // Init
 
 
@@ -923,7 +921,7 @@ void viterbi( vector<double> &startP,
     if (isCov[k] and isCov[k-1]) {
       int curCovIdx=obsIndex[k];
       int prevCovIdx=obsIndex[k-1];
-      for(size_t i=0;i<nCovStates;i++) {	  
+      for(size_t i=0;i<nCovStates;i++) {
 	double maxProb = v[0][k-1] + covCovTransP[0][i];
 	int maxState=0;
 	for(size_t j=1; j < nCovStates; j++) {
@@ -941,7 +939,7 @@ void viterbi( vector<double> &startP,
       //
       // Transition from snv to cov state. This one is pretty complicated.
       // For states that are between 1 and 3, the copy number does not change.
-      // 
+      //
       int prevSnvIdx    = obsIndex[k-1];
       int curCovIdx     = obsIndex[k];
       double maxSNVProb = v[1][k-1];
@@ -970,13 +968,13 @@ void viterbi( vector<double> &startP,
 	//
 	// Not done, assert here.
 	assert(0);
-	
+
 
       }
     }
   }
 
-      
+
   // Traceback
   for(size_t i=0;i<nStates;i++)
     {
@@ -1000,8 +998,8 @@ void viterbi( vector<double> &startP,
     }
   }
   viterbiPath[lastObservation] = maxState;
-  
-  
+
+
   for( size_t f=lastObservation; f > 0; f--) {
       viterbiPath[f] = maxState;
       maxState=opt[maxState][f];
@@ -1013,7 +1011,7 @@ class CountNuc {
 public:
   int index;
   int count;
-  int operator<(const CountNuc &rhs) {
+  int operator<(const CountNuc &rhs) const {
     return count < rhs.count;
   }
 };
@@ -1058,7 +1056,7 @@ int StoreSNVs(char *contigSeq,
       continue;
     }
     sort(counts.begin(), counts.end());
-    char refNuc=toupper(contigSeq[i]);
+    const char refNuc=toupper(contigSeq[i]);
     if (counts[4].index != 4 and
 	counts[3].index != 4 and
 	refNuc != 'N' and
@@ -1076,7 +1074,7 @@ int StoreSNVs(char *contigSeq,
       }
       if (snvs.size() % 100000 == 0) {
 	cerr << "Stored " << snvs.size() << " at " << i << endl;
-      }      
+      }
     }
   }
   return 1;
@@ -1087,25 +1085,25 @@ int StoreSNVs(char *contigSeq,
 int IncrementCounts(bam1_t *b,
 		    int contigLength,
 		     vector<int> &nA, vector<int> &nC, vector<int> &nG, vector<int> &nT, vector<int> &nDel) {
-  int readLength = b->core.l_qseq;			
+  const int readLength = b->core.l_qseq;
   if (readLength < BIN_LENGTH or b->core.qual < 10 or b->core.flag & 0x800) {
     return 0;
   }
-	  
+
   vector<char> seq(readLength);
   uint8_t *q = bam_get_seq(b);
   for (int i=0; i < readLength; i++) {seq[i]=seq_nt16_str[bam_seqi(q,i)];	}
   uint32_t* cigar = bam_get_cigar(b);
-  int refLen = bam_cigar2rlen(b->core.n_cigar, cigar);
+  const int refLen = bam_cigar2rlen(b->core.n_cigar, cigar);
   int qPos=0;
   int refPos = b->core.pos;
   int ci;
   int regionOffset=refPos;
   bool first=true;
   for (ci=0; ci < b->core.n_cigar; ci++) {
-    int opLen=bam_cigar_oplen(cigar[ci]);
-    int op=bam_cigar_op(cigar[ci]);
-	  
+    const int opLen=bam_cigar_oplen(cigar[ci]);
+    const int op=bam_cigar_op(cigar[ci]);
+
     if (op == BAM_CSOFT_CLIP) {
       qPos += opLen;
       continue;
@@ -1115,7 +1113,7 @@ int IncrementCounts(bam1_t *b,
       continue;
     }
     if (op == BAM_CDEL) {
-      int stop=refPos+opLen;
+      const int stop=refPos+opLen;
       for (; refPos < stop and refPos < contigLength; refPos++) {
 	nDel[regionOffset]+=1;
 	regionOffset++;
@@ -1130,12 +1128,12 @@ int IncrementCounts(bam1_t *b,
       }
       else {
 	for (int p=0; p < opLen; p++) {
-	  if (refPos >= contigLength){ 
+	  if (refPos >= contigLength){
 	    break;
 	  }
 	  if (refPos >= 1) {
 	    first=false;
-	    char nuc=toupper(seq[qPos]);
+	    const char nuc=toupper(seq[qPos]);
 	    assert(regionOffset < nA.size());
 	    /*
 	    if (regionOffset == 20504515 or refPos == 20504515 ) {
@@ -1159,13 +1157,13 @@ int IncrementCounts(bam1_t *b,
 void ThreadedBWE(ThreadInfo *threadInfo) {
   double pChrom;
   while (*(threadInfo->lastSeq) < (*(*threadInfo).contigNames).size()) {
-  
+
     pthread_mutex_lock(threadInfo->semaphore);
 
     int curSeq = *((*threadInfo).lastSeq);
     *(threadInfo->lastSeq) = *(threadInfo->lastSeq) + 1;
-    pthread_mutex_unlock(threadInfo->semaphore);      
-    
+    pthread_mutex_unlock(threadInfo->semaphore);
+
     if (curSeq >= threadInfo->contigNames->size()) {
       break;
     }
@@ -1181,7 +1179,7 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
 
     pChrom = BaumWelchEOnChrom(*threadInfo->startP,
 			       *threadInfo->transP,
-			       *threadInfo->emisP, 
+			       *threadInfo->emisP,
 			       (*threadInfo->covBins)[curSeq],
 			       f, b,
 			       expCovCovTransP,
@@ -1190,7 +1188,7 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
     //
     // Update expected transitions
     //
-    pthread_mutex_lock(threadInfo->semaphore);  
+    pthread_mutex_lock(threadInfo->semaphore);
     for (int i=0; i < threadInfo->transP->size(); i++) {
       for (int j=0; j < (*threadInfo->transP)[i].size(); j++) {
 	(*threadInfo->expTransP)[i][j] += expCovCovTransP[i][j];
@@ -1201,12 +1199,12 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
 	(*threadInfo->expEmisP)[i][j] += expEmisP[i][j];
       }
     }
-    
+
     *threadInfo->pModel  += pChrom;
     pthread_mutex_unlock(threadInfo->semaphore);
     StorePosteriorMaxIntervals((*threadInfo->covBins)[curSeq],
 			       f, b,
-			       (*threadInfo->copyIntervals)[curSeq]);    
+			       (*threadInfo->copyIntervals)[curSeq]);
   }
 }
 
@@ -1218,7 +1216,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
     //
     pthread_mutex_lock(threadInfo->semaphore);
 
-    int curSeq = *((*threadInfo).lastSeq);
+    const int curSeq = *((*threadInfo).lastSeq);
     *(threadInfo->lastSeq) = *(threadInfo->lastSeq) + 1;
     (*(*threadInfo).totalReads)[curSeq] = 0;
     (*(*threadInfo).totalBases)[curSeq] = 0;
@@ -1227,7 +1225,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
     // Deal with race condition by double checking curSeq;
     //
     if (curSeq >= threadInfo->contigNames->size()) {
-      pthread_mutex_unlock(threadInfo->semaphore);      
+      pthread_mutex_unlock(threadInfo->semaphore);
       break;
     }
 
@@ -1235,22 +1233,22 @@ void ParseChrom(ThreadInfo *threadInfo) {
     //    (*threadInfo).covBins->push_back(vector<int>());
     //    (*threadInfo).snvs->push_back(vector<SNV>());
     pthread_mutex_unlock(threadInfo->semaphore);
-    
-    int contigLength=threadInfo->contigLengths->at(curSeq);
+
+    const int contigLength=threadInfo->contigLengths->at(curSeq);
 
 
     vector<int> nA(contigLength, 0), nC(contigLength, 0), nT(contigLength, 0), nG(contigLength,0), nDel(contigLength, 0);
-    
+
     stringstream regionStrm;
     regionStrm << (*(*threadInfo).contigNames)[curSeq];// << ":1-" << contigLength;
 
-    string region=regionStrm.str();
+    const string region=regionStrm.str();
 
 
     hts_itr_t *regionIter = sam_itr_querys(threadInfo->bamidx, threadInfo->samHeader, region.c_str());
     int chromLen;
     char *chromSeq = fai_fetch(threadInfo->fai, region.c_str(), &chromLen);
-    
+
     bool continueParsing=true;
     vector<bam1_t*> reads; //(bam_init1());
     long totalSize=0;
@@ -1264,11 +1262,11 @@ void ParseChrom(ThreadInfo *threadInfo) {
       pthread_mutex_lock(threadInfo->semaphore);
       int bufSize=0;
       while (bufSize < 100000000 and continueParsing) {
-	bam1_t *b = bam_init1();	
-	int res=sam_itr_next(threadInfo->htsfp, regionIter, b);
+	bam1_t *b = bam_init1();
+	const int res=sam_itr_next(threadInfo->htsfp, regionIter, b);
 	bufSize+= b->l_data;
 	totalSize+= b->l_data;
-	
+
 	if (res < 0) { // or totalReads < 15000) {
 	  continueParsing = false;
 	  cerr << "Ending parsing of " << region << " with " << totalSize << " data and " << chunkNumber << " iterations." << endl;
@@ -1294,8 +1292,8 @@ void ParseChrom(ThreadInfo *threadInfo) {
 	startpos=b->core.pos;
 	(*(*threadInfo).totalReads)[curSeq]++;
 	(*(*threadInfo).totalBases)[curSeq]+= endpos-startpos;
-	
-	int nCigar=b->core.n_cigar;
+
+	const int nCigar=b->core.n_cigar;
 	uint32_t*cigar=bam_get_cigar(b);
 	int frontClip=-1, backClip=-1;
 	int frontClipLen=0;
@@ -1306,61 +1304,61 @@ void ParseChrom(ThreadInfo *threadInfo) {
 	}
 	else if (nCigar > 2 and bam_cigar_op(cigar[1]) == BAM_CSOFT_CLIP) {
 	  frontClip=1;
-	  frontClipLen=bam_cigar_oplen(cigar[1]);	  
+	  frontClipLen=bam_cigar_oplen(cigar[1]);
 	}
 	if (frontClip > 0 and bam_cigar_op(cigar[nCigar-1]) == BAM_CSOFT_CLIP) {
 	  backClip=nCigar-1;
-	  backClipLen=bam_cigar_oplen(cigar[nCigar-1]);	  
+	  backClipLen=bam_cigar_oplen(cigar[nCigar-1]);
 	}
 	else if (frontClip > 0 and nCigar > 2 and bam_cigar_op(cigar[nCigar-2]) == BAM_CSOFT_CLIP) {
 	  backClip=nCigar-2;
-	  backClipLen=bam_cigar_oplen(cigar[nCigar-2]);	  
+	  backClipLen=bam_cigar_oplen(cigar[nCigar-2]);
 	}
 	if (frontClipLen > MIN_CLIP_LENGTH) {
-	  int bin=startpos/BIN_LENGTH;
+	  const int bin=startpos/BIN_LENGTH;
 	  (*threadInfo->clipBins)[curSeq][bin] += 1;
 	}
 	if (backClipLen > MIN_CLIP_LENGTH) {
-	  int bin=endpos/BIN_LENGTH;
-	  (*threadInfo->clipBins)[curSeq][bin] += 1;	  	  
+	  const int bin=endpos/BIN_LENGTH;
+	  (*threadInfo->clipBins)[curSeq][bin] += 1;
 	}
 	bam_destroy1(b);
       }
     }
     // Never compute in the last bin
-    int nBins=contigLength/BIN_LENGTH;
+    const int nBins=contigLength/BIN_LENGTH;
 
     for (int bin=0; bin < nBins; bin++) {
-      int start=bin*BIN_LENGTH;
-      int end=min((bin+1)*BIN_LENGTH, contigLength);
+      const int start=bin*BIN_LENGTH;
+      const int end=min((bin+1)*BIN_LENGTH, contigLength);
       int totCov=0;
       for (int bp=start; bp < end; bp++) {
 	totCov+=nA[bp] + nC[bp] + nG[bp] + nT[bp] + nDel[bp];
       }
       (*threadInfo->covBins)[curSeq][bin] =totCov/BIN_LENGTH;
     }
-    
+
     //
     // Detect SNVS
-    //        
+    //
     StoreSNVs(chromSeq, chromLen, threadInfo->mean,
 	      nA, nC, nG, nT, nDel,
 	      (*threadInfo->snvs)[curSeq]);
     cerr << "Stored " << (*threadInfo->snvs)[curSeq].size() << " snvs for " << (*threadInfo->contigNames)[curSeq] << endl;
-    
+
   }
   if (threadInfo->exit) {
     pthread_exit(NULL);
   }
 }
-    
+
 vector<int> NucMap;
-int GetRefAndAlt(char refNuc, vector<int> &counts, int &ref, int &alt) {
+int GetRefAndAlt(char refNuc, const vector<int> &counts, int &ref, int &alt) {
   vector<int> sCounts=counts;
   sort(sCounts.begin(), sCounts.end());
-  
-  int second = sCounts[2];
-  int first  = sCounts[3];
+
+  const int second = sCounts[2];
+  const int first  = sCounts[3];
   int firstIndex=-1, secondIndex=-1;
   for (int i=0; i < 4; i++) {
     if (firstIndex == -1 and counts[i] == first) {
@@ -1374,7 +1372,7 @@ int GetRefAndAlt(char refNuc, vector<int> &counts, int &ref, int &alt) {
     ref=0; alt=0;
     return 4;
   }
-  int refNucIndex=NucMap[refNuc];
+  const int refNucIndex=NucMap[refNuc];
   if (first == 0 or second/first < 0.2) {
     ref=0;
     alt=0;
@@ -1389,7 +1387,7 @@ int GetRefAndAlt(char refNuc, vector<int> &counts, int &ref, int &alt) {
     ref=second;
     alt=first;
     return firstIndex;
-  }  
+  }
 }
 
 const char* nucs = "ACGTN";
@@ -1397,7 +1395,7 @@ const char* nucs = "ACGTN";
 static int pileup_blank(void *data, bam1_t *b) {
   return 0;
 }
-int EstimateCoverage(string &bamFileName, vector<vector<int> > &allCovBins, vector<string> &chroms, vector<int> &lengths, string &useChrom, double &mean, double &var) {
+int EstimateCoverage(const string &bamFileName, const vector<vector<int> > &allCovBins, const vector<string> &chroms, const vector<int> &lengths, string &useChrom, double &mean, double &var) {
   int useChromIndex=0;
   if (useChrom == "") {
     int maxLen=0;
@@ -1422,14 +1420,14 @@ int EstimateCoverage(string &bamFileName, vector<vector<int> > &allCovBins, vect
       break;
     }
   }
-  
+
   if (contigLength == 0) {
     cerr << "ERROR Could not estimate coverage." <<endl;
     exit(1);
   }
   if (allCovBins.size() > 0) {
     assert(allCovBins[useChromIndex].size() == lengths[useChromIndex]/100);
-    int lastBin=allCovBins[useChromIndex].size();
+    const int lastBin=allCovBins[useChromIndex].size();
     if (lastBin == 0) {
       cerr << "ERROR. Could not estimate coverage using precomputed bins." << endl;
       exit(1);
@@ -1465,43 +1463,43 @@ int EstimateCoverage(string &bamFileName, vector<vector<int> > &allCovBins, vect
     htsFile *htsfp;
     vector<int> covBins;
     htsfp = hts_open(bamFileName.c_str(),"r");
-  
+
     hts_idx_t *bamidx;
     if ((bamidx = sam_index_load(htsfp, bamFileName.c_str())) == 0) {
       cerr << "ERROR reading index" << endl;
       exit(0);
     }
-    
+
     const htsFormat *fmt = hts_get_format(htsfp);
     if (fmt == NULL or (fmt->format != sam and fmt->format != bam)) {
       cerr << "Cannot determine format of input reads." << endl;
       exit(1);
     }
 
-    bam_hdr_t *samHeader;			
+    bam_hdr_t *samHeader;
     samHeader = sam_hdr_read(htsfp);
-    
+
     hts_itr_t *regionIter = sam_itr_querys(bamidx, samHeader, useChrom.c_str());
 
     vector<int> nA(contigLength, 0), nC(contigLength, 0), nT(contigLength, 0), nG(contigLength,0), nDel(contigLength, 0);
-  
-  
+
+
     bool continueParsing=true;
     int nSamples=0;
-    
+
     int curEndPos=0;
     int curCovBin=0;
     long totalSize;
-    
-    while (continueParsing) {    
+
+    while (continueParsing) {
       int bufSize=0;
       int nReads=0;
       while (bufSize < 100000000 and continueParsing) {
-	bam1_t *b = bam_init1();	
-	int res=sam_itr_next(htsfp, regionIter, b);
+	bam1_t *b = bam_init1();
+	const int res=sam_itr_next(htsfp, regionIter, b);
 	bufSize+= b->l_data;
 	totalSize+= b->l_data;
-	
+
 	if (res < 0) {
 	  continueParsing = false;
 	  break;
@@ -1515,14 +1513,14 @@ int EstimateCoverage(string &bamFileName, vector<vector<int> > &allCovBins, vect
 
       //
       // Compute coverage for bins
-      int lastBin=(curEndPos-30000)/100;
+      const int lastBin=(curEndPos-30000)/100;
       for (int binIndex=curCovBin; binIndex < lastBin; binIndex++) {
 	int binTot=0;
 	for (int nuc=binIndex*100; nuc < (binIndex+1)*100; nuc++) {
 	  binTot += nA[nuc] + nC[nuc]+ nG[nuc] + nT[nuc] + nDel[nuc];
 	}
 	covBins.push_back(binTot/100);
-	
+
       }
       curCovBin=lastBin;
     //
@@ -1533,7 +1531,7 @@ int EstimateCoverage(string &bamFileName, vector<vector<int> > &allCovBins, vect
       //
       // First pass gets close to CN=2
       //
-      
+
       for (int binIndex=0; binIndex<lastBin; binIndex++) {
 	totCov+=covBins[binIndex];
       }
@@ -1563,15 +1561,15 @@ int EstimateCoverage(string &bamFileName, vector<vector<int> > &allCovBins, vect
 
 
 
-void WriteParameterFile(string &fileName,
+void WriteParameterFile(const string &fileName,
 			int nStates,
 			double covMean,
 			double covVar,
 			int maxState,
 			int maxCov,
-			vector<double > &startP,
-			vector<vector<double > >&transP,
-			vector<vector<double > >&emisP) {
+			const vector<double > &startP,
+			const vector<vector<double > >&transP,
+			const vector<vector<double > >&emisP) {
   ofstream outFile(fileName.c_str());
   outFile << "nStates\t" << nStates << endl
 	  << "covMean\t" << covMean << endl
@@ -1600,10 +1598,10 @@ void WriteParameterFile(string &fileName,
     }
     outFile << endl;
   }
-}  
-  
+}
 
-void ReadParameterFile(string &fileName,
+
+void ReadParameterFile(const string &fileName,
 		       int &nStates,
 		       double &covMean,
 		       double &covVar,
@@ -1636,26 +1634,26 @@ void ReadParameterFile(string &fileName,
   }
   inFile >> spacer >> nr >> nc;
   emisP.resize(nr);
-  for (int i=0; i < nr; i++) {    
+  for (int i=0; i < nr; i++) {
     for (int j=0; j < nc; j++) {
       inFile >> val;
       emisP[i].push_back(val);
     }
   }
-}  
+}
 
-    
-  
-  
 
-  
-void ReadFai(string faiFileName, vector<string> &contigNames, vector<int> &contigLengths)   {
+
+
+
+
+void ReadFai(const string faiFileName, vector<string> &contigNames, vector<int> &contigLengths)   {
   ifstream faiIn(faiFileName.c_str());
   if (faiIn.good() == false) {
     cerr << "ERROR. Reference is not indexed, or could not open .fai file" << endl;
     exit(1);
   }
-    
+
   while (faiIn) {
     string line;
     getline(faiIn, line);
@@ -1663,9 +1661,9 @@ void ReadFai(string faiFileName, vector<string> &contigNames, vector<int> &conti
     if (line != "") {
       string contig;
       int length;
-	
+
       strm >> contig;
-      strm >> length;      
+      strm >> length;
       contigNames.push_back(contig);
       contigLengths.push_back(length);
     }
@@ -1674,7 +1672,7 @@ void ReadFai(string faiFileName, vector<string> &contigNames, vector<int> &conti
 
 
 void InitParams(vector<vector<double> > &covCovTransP,
-		vector<vector<double> > &covSnvTransP,		
+		vector<vector<double> > &covSnvTransP,
 		vector<vector<double> > &snvSnvTransP,
 		int nCovStates, int nSNVStates, double diag, double offDiag,
 		vector<vector<double> > &emisP, int model, int maxCov, double mean, double var,
@@ -1691,7 +1689,7 @@ void InitParams(vector<vector<double> > &covCovTransP,
       }
     }
   }
-  double snvOffDiag=(1-diag)/2;
+  const double snvOffDiag=(1-diag)/2;
   covSnvTransP.resize(nCovStates);
   for (int i=0; i < nCovStates; i++) {
     covSnvTransP[i].resize(nSNVStates);
@@ -1718,50 +1716,50 @@ void InitParams(vector<vector<double> > &covCovTransP,
       }
     }
   }
-  
-  
+
+
   emisP.resize(nCovStates);
   for (size_t i=0;i<nCovStates;i++) {
     emisP[i].resize(maxCov+1);
     double stateSum=0;
     for (size_t j=0;j<=maxCov;j++) {
-      if (model == POIS) {	
+      if (model == POIS) {
 	emisP[i][j]=LgPrpoiss( (int) i , j , (int) mean/2 );
 	stateSum+=exp(LgPrpoiss( (int) i , j , (int) mean/2 ));
       }
       else  {
 	emisP[i][j]=LgNegBinom((int)i, (int) j, mean/2, var/2);
-	stateSum+=exp(LgNegBinom((int)i, (int) j, mean/2, var/2));	
-      }      
+	stateSum+=exp(LgNegBinom((int)i, (int) j, mean/2, var/2));
+      }
     }
   }
-  
+
   binoP.resize(3);
   for (size_t i=0; i < binoP.size(); i++) {
     //
     // Create a matrix for each state. Store up to max-cov
     //
     binoP[i].resize(maxCov+1);
-  
+
     // Initialize matrix.
     //
     for (size_t j=0; j <= maxCov; j++) {
       binoP[i][j].resize(j+1);
     }
   }
-    
+
   //
   // Initialize copy number 1
   int i=0;
-  double bino_one=0.9;
+  const double bino_one=0.9;
   binoP[i][0][0] = bino_one;
   for (int j2=1; j2 < maxCov; j2++) {
-    binoP[i][0][0] = log(1/((1-bino_one)/j2));    
+    binoP[i][0][0] = log(1/((1-bino_one)/j2));
     for (int k=0; k <= j2; k++) {
       binoP[i][j2][k] = LgBinom(0.1, k, j2);
     }
   }
-  
+
   // CN=2, diploid
   i=1;
   //
@@ -1787,13 +1785,13 @@ void PrintHelp() {
          << "   -b bed           Read depth bed from this file. Skip calculation of depth." << endl
          << "   -s snv-file      Read SNVs from this file (when not estimating from a BAM)" << endl
          << "   -p parameter     Read parameter file (do not train with Baum-Welch)" << endl
-	 << " Options controlling depth calculation " << endl      
+	 << " Options controlling depth calculation " << endl
 	 << "   -e value (float)   Value of log-epsilon (-500)." << endl
 	 << "   -m value [pois|nb] Coverage model to use, Poisson (pois), or negative binomial (nb). Default nb." << endl
 	 << "   -x value Max state to allow (10)" << endl
-	 << " -t value (int)     Number of threads (4) " << endl            
-	 << " -c contig          Use this contig to estimate coverage. By default, longest contig." << endl      
-	 << " Options controlling output:" << endl      
+	 << " -t value (int)     Number of threads (4) " << endl
+	 << " -c contig          Use this contig to estimate coverage. By default, longest contig." << endl
+	 << " Options controlling output:" << endl
          << " -o file            Output vcf to this file (stdout)." << endl
          << " --Sample           use this sample name in the vcf (sample)" << endl
 	 << " -C contig          Only run hmm on this chrom." << endl
@@ -1807,7 +1805,7 @@ void PrintHelp() {
 int main(int argc, const char* argv[]) {
   int nproc=4;
   double scale=2;
-  
+
   if (argc < 3) {
     PrintHelp();
     exit(1);
@@ -1816,8 +1814,8 @@ int main(int argc, const char* argv[]) {
   NucMap[(int)'A']=0;
   NucMap[(int)'C']=1;
   NucMap[(int)'G']=2;
-  NucMap[(int)'T']=3;	
-  int maxState=10;	
+  NucMap[(int)'T']=3;
+  int maxState=10;
   string bamFileName="";
   if (strcmp(argv[1], "-h") == 0) {
     PrintHelp();
@@ -1854,7 +1852,7 @@ int main(int argc, const char* argv[]) {
       else if (strcmp(argv[argi], "-S") == 0) {
 	++argi;
 	snvOutFileName=argv[argi];
-      }      
+      }
       else if (strcmp(argv[argi], "-t") == 0) {
 	++argi;
 	nproc=atoi(argv[argi]);
@@ -1866,7 +1864,7 @@ int main(int argc, const char* argv[]) {
       else if (strcmp(argv[argi], "-P") == 0) {
 	++argi;
 	paramOutFile=argv[argi];
-      }      
+      }
       else if (strcmp(argv[argi], "-b") == 0) {
 	++argi;
 	covBedInFileName = argv[argi];
@@ -1874,7 +1872,7 @@ int main(int argc, const char* argv[]) {
       else if (strcmp(argv[argi], "-B") == 0) {
 	++argi;
 	covBedOutFileName = argv[argi];
-      }      
+      }
       else if (strcmp(argv[argi], "-e") == 0) {
 	++argi;
 	lepsi=atof(argv[argi]);
@@ -1896,7 +1894,7 @@ int main(int argc, const char* argv[]) {
       else if (strcmp(argv[argi], "-L") == 0) {
 	++argi;
 	clipOutFileName=argv[argi];
-      }      
+      }
       else if (strcmp(argv[argi], "-o") == 0) {
 	++argi;
 	outFileName = argv[argi];
@@ -1927,8 +1925,8 @@ int main(int argc, const char* argv[]) {
 	PrintHelp();
 	exit(1);
       }
-      
-      else {	
+
+      else {
 	PrintHelp();
 	cerr << "Invalid argument " << argv[argi] << endl;
 	exit(1);
@@ -1948,9 +1946,9 @@ int main(int argc, const char* argv[]) {
     cerr << "ERROR. Must specify either a coverage file or a bam file" << endl;
     exit(1);
   }
-  
-  
-  string faiFileName=referenceName + ".fai";
+
+
+  const string faiFileName=referenceName + ".fai";
   vector<string> contigNames, allContigNames;
   vector<int>    contigLengths, allContigLengths;
   //
@@ -1974,7 +1972,7 @@ int main(int argc, const char* argv[]) {
       exit(1);
     }
   }
-  
+
   vector<vector<int> > covBins;
   vector<vector<int> > clipBins;
   double mean;
@@ -2003,13 +2001,13 @@ int main(int argc, const char* argv[]) {
   if (snvInFileName != "") {
       ReadSNVs(snvInFileName, contigNames, snvs);
   }
-  
+
   if (paramInFile != "") {
      ReadParameterFile(paramInFile, nStates,
 		       mean, var, maxState, maxCov,
 		       startP, covCovTransP, emisP);
   }
-  
+
   //
   // Get the header of the bam file
   //
@@ -2017,7 +2015,7 @@ int main(int argc, const char* argv[]) {
   bam_hdr_t *samHeader=NULL;
   hts_idx_t *bamidx=NULL;
 
-  
+
   if (bamFileName != "") {
     htsfp = hts_open(bamFileName.c_str(),"r");
     samHeader = sam_hdr_read(htsfp);
@@ -2029,20 +2027,20 @@ int main(int argc, const char* argv[]) {
     if (fmt == NULL or (fmt->format != sam and fmt->format != bam)) {
       cout << "Cannot determine format of input reads." << endl;
       exit(1);
-    }    
+    }
   }
 
 
-  
-  // 
+
+  //
   // Read index for random io
   //
 
   nproc = min(nproc, (int) contigNames.size());
 
   pthread_t *threads = new pthread_t[nproc];
-  vector<ThreadInfo> threadInfo(nproc);		
-  pthread_mutex_t semaphore;		
+  vector<ThreadInfo> threadInfo(nproc);
+  pthread_mutex_t semaphore;
   pthread_mutex_init(&semaphore, NULL);
   pthread_attr_t *threadAttr = new pthread_attr_t[nproc];
   int curSeq=0;
@@ -2056,7 +2054,7 @@ int main(int argc, const char* argv[]) {
     pthread_attr_init(&threadAttr[procIndex]);
     if (bamFileName != "") {
       threadInfo[procIndex].htsfp = hts_open(bamFileName.c_str(),"r");
-      
+
     }
     else {
       threadInfo[procIndex].htsfp = NULL;
@@ -2064,20 +2062,20 @@ int main(int argc, const char* argv[]) {
     threadInfo[procIndex].bamidx = bamidx;
     threadInfo[procIndex].samHeader=samHeader;
     threadInfo[procIndex].fai = fai_load_format(referenceName.c_str(), FAI_FASTA);
-    if (nproc > 1) 
-      threadInfo[procIndex].exit = true;    
+    if (nproc > 1)
+      threadInfo[procIndex].exit = true;
     else
-      threadInfo[procIndex].exit = false;       
+      threadInfo[procIndex].exit = false;
     threadInfo[procIndex].lastSeq = &curSeq;
     threadInfo[procIndex].semaphore = &semaphore;
     threadInfo[procIndex].contigNames = &contigNames;
     threadInfo[procIndex].contigLengths = &contigLengths;
     threadInfo[procIndex].covBins = &covBins;
-    threadInfo[procIndex].clipBins = &clipBins;    
-    threadInfo[procIndex].copyNumber = &copyNumber;    
-    threadInfo[procIndex].snvs = &snvs;    
+    threadInfo[procIndex].clipBins = &clipBins;
+    threadInfo[procIndex].copyNumber = &copyNumber;
+    threadInfo[procIndex].snvs = &snvs;
     threadInfo[procIndex].lepsi = lepsi;
-    threadInfo[procIndex].scale = scale;    
+    threadInfo[procIndex].scale = scale;
     threadInfo[procIndex].maxState = maxState;
     threadInfo[procIndex].maxCov = maxCov;
     threadInfo[procIndex].mean = mean;
@@ -2091,10 +2089,10 @@ int main(int argc, const char* argv[]) {
     threadInfo[procIndex].pModel=&pModel;
     threadInfo[procIndex].totalReads = &nReads;
     threadInfo[procIndex].totalBases = &totalBases;
-    
+
   }
 
-  
+
   //
   // If already trained, read those parameters.
   //
@@ -2107,7 +2105,7 @@ int main(int argc, const char* argv[]) {
     startP.resize(nStates);
     for(size_t i=0;i<(nStates);i++){
       startP[i]=log(1./(nStates));
-    }   
+    }
   }
 
   //
@@ -2120,7 +2118,7 @@ int main(int argc, const char* argv[]) {
     clipBins.resize(contigLengths.size());
     for (int c=0; c < contigLengths.size(); c++ ) {
       clipBins[c].resize(contigLengths[c]/BIN_LENGTH);
-    }    
+    }
   }
   if (covBedInFileName == "") {
     covBins.resize(contigLengths.size());
@@ -2128,19 +2126,19 @@ int main(int argc, const char* argv[]) {
     for (int c=0; c < contigLengths.size(); c++ ) {
       covBins[c].resize(contigLengths[c]/BIN_LENGTH);
       clipBins[c].resize(contigLengths[c]/BIN_LENGTH);
-      copyNumber[c].resize(contigLengths[c]/BIN_LENGTH);       
+      copyNumber[c].resize(contigLengths[c]/BIN_LENGTH);
     }
 
     //
     // Compute coverage from bam.
     //
-    int parseChromNProc=min(4,nproc);
+    const int parseChromNProc=min(4,nproc);
     if (nproc > 1) {
       for (int procIndex = 0; procIndex < parseChromNProc; procIndex++) {
-	pthread_attr_init(&threadAttr[procIndex]);	
+	pthread_attr_init(&threadAttr[procIndex]);
 	pthread_create(&threads[procIndex], &threadAttr[procIndex], (void* (*)(void*)) ParseChrom, &threadInfo[procIndex]);
       }
-      
+
       for (int procIndex = 0; procIndex < parseChromNProc ; procIndex++) {
 	pthread_join(threads[procIndex], NULL);
       }
@@ -2167,12 +2165,12 @@ int main(int argc, const char* argv[]) {
 
   EstimateCoverage(bamFileName, covBins, allContigNames, allContigLengths, useChrom, mean, var);
 
-  
+
   //
   // Cap coverage where hmm does not bother calculating.
   //
   maxCov=(int)mean/2*(maxState+1);
-  
+
   for (size_t c=0; c < covBins.size(); c++) {
     for (size_t b=0; b < covBins[c].size(); b++) {
       covBins[c][b] = min(covBins[c][b], maxCov);
@@ -2207,43 +2205,43 @@ int main(int argc, const char* argv[]) {
     std::cerr << "mean is zero, Exiting" << endl;
     return EXIT_FAILURE;
   }
-    
+
   // trans prob, scale 3->2 by overlap of pdf.
 
-  poisson distribution1(3*mean/2);
-  double result3=pdf(distribution1, 3*mean/2);
+  const poisson distribution1(3*mean/2);
+  const double result3=pdf(distribution1, 3*mean/2);
 
-  poisson distribution2(2*mean/2);
-  double result2=pdf(distribution2, 3*mean/2);
+  const poisson distribution2(2*mean/2);
+  const double result2=pdf(distribution2, 3*mean/2);
 
-  double epsi23 = result2/result3;
+  const double epsi23 = result2/result3;
 
   //*300
 
   //no epsi
-  double small=-30;
+  const double small=-30;
   //  double beta =  small + ( scale * log(epsi23))  ;
-  double beta=small;
+  const double beta=small;
   //mean no. of bins for cn=3 call
-  int nSNVStates=3;
-  double unif=log(1.0/nStates);
+  const int nSNVStates=3;
+  const double unif=log(1.0/nStates);
   if (paramInFile == "") {
     InitParams(covCovTransP, covSnvTransP, snvSnvTransP,
 	       nStates, nSNVStates, log(1-exp(small)), log(exp(small)/(nStates-1)),
 	       emisP, model, maxCov, mean, var, binoP);
     printModel(covCovTransP, &cerr);
-    //    printEmissions(emisP);    
+    //    printEmissions(emisP);
 
     //
     // Baum-Welch training.
     //
-    
+
     double prevPX=0;
     vector<vector<double> > prevTransP, prevEmisP;
     for (int i=0; i < 4; i++) {
       prevTransP=covCovTransP;
       prevEmisP=emisP;
-      
+
       vector<double> stateWeightedTotCov(nStates, 0),
 	stateWeightedTotVar(nStates, 0),
 	stateTotProb(nStates, 0);
@@ -2256,14 +2254,14 @@ int main(int argc, const char* argv[]) {
       for (int r=0; r < nStates; r++ ) {
 	expCovCovTransP[r].resize(nStates,0);
 	expCovSnvTransP[r].resize(nStates,0);
-	expSnvSnvTransP[r].resize(nStates,0);	
+	expSnvSnvTransP[r].resize(nStates,0);
 	fill(expCovCovTransP[r].begin(), expCovCovTransP[r].end(), 0);
 	expEmisP[r].resize(emisP[0].size());
       }
       double px=0;
       int totalObs=0;
       curSeq=0;
-      for (int procIndex = 0; procIndex < nproc; procIndex++) {  
+      for (int procIndex = 0; procIndex < nproc; procIndex++) {
 	pthread_create(&threads[procIndex], &threadAttr[procIndex], (void* (*)(void*)) ThreadedBWE, &threadInfo[procIndex]);
       }
       for (int procIndex = 0; procIndex < nproc ; procIndex++) {
@@ -2272,7 +2270,7 @@ int main(int argc, const char* argv[]) {
       px = pModel;
 
       if (prevPX != 0 and px - prevPX < 100 and i > 1) {
-	cerr << "Ending iteration after " << i << " steps" << endl;       
+	cerr << "Ending iteration after " << i << " steps" << endl;
 	covCovTransP = prevTransP;
 	emisP  = prevEmisP;
 	break;
@@ -2288,16 +2286,16 @@ int main(int argc, const char* argv[]) {
 		 expCovCovTransP, expEmisP,
 		 priorCovCov,
 		 updateTransP, updateEmisP);
-      
+
       printModel(updateTransP, &cerr);
-      covCovTransP=updateTransP;      
+      covCovTransP=updateTransP;
     }
 
     //
     // Eventually this needs to update for some multi-chrom code.
     //
-   
-    
+
+
     if (paramOutFile != "") {
       WriteParameterFile(paramOutFile, nStates, mean, var, maxState, maxCov, startP, covCovTransP, emisP);
     }
@@ -2309,7 +2307,7 @@ int main(int argc, const char* argv[]) {
   for (int c=0; c < contigNames.size(); c++) {
     int snvStart=0;
     for (int i=0; i < copyIntervals[c].size(); i++) {
-      int curCN =copyIntervals[c][i].copyNumber;
+      const int curCN =copyIntervals[c][i].copyNumber;
       if ( curCN == 1 or curCN == 3) {
 	while (snvStart < snvs[c].size() and snvs[c][snvStart].pos < copyIntervals[c][i].start) {
 	  snvStart++;
@@ -2348,7 +2346,7 @@ int main(int argc, const char* argv[]) {
       }
     }
   }
-  
+
   ostream *outPtr;
   ofstream outFile;
   if (outFileName != "") {
