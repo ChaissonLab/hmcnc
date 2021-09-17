@@ -1,28 +1,27 @@
+#include <cassert>
+#include <cctype>
+#include <cstdio>
+#include <cstdlib>
+
+#include <algorithm>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <map>
+#include <numeric>
+#include <limits>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include "htslib/faidx.h"
 #include "htslib/hts.h"
 #include "htslib/sam.h"
-#include <string>
-#include <vector>
-#include <iostream>
-#include <ostream>
-#include <stdlib.h>
-#include <fstream>
-#include <ctype.h>
-#include <stdio.h>
-#include <assert.h>
-#include <algorithm>
-#include "htslib/faidx.h"
-#include <thread>
-#include <map>
-#include <sstream>
-#include <iomanip>
+
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/math/distributions/negative_binomial.hpp>
 #include <boost/math/distributions/binomial.hpp>
-
-
-#include <istream>
-#include <limits>
-#include <numeric>
 
 using boost::math::binomial;
 
