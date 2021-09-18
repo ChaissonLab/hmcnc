@@ -8,7 +8,7 @@ import argparse
 
 #parser = argparse.ArgumentParser(description="Location of boost include folder")
 #parser.add_argument("--boost",help="Location of boost install/include folder. \
-#	Most likely {anaconda install}/envs/\{proj_env\}/include")
+g#	Most likely {anaconda install}/envs/\{proj_env\}/include")
 
 # Snakemake and working directories
 SD = os.path.dirname(workflow.snakefile)
