@@ -102,7 +102,7 @@ double PairSumOfLogP(double a, double b) {
     const double diff = min(a,b) - m;
     const double e = exp(diff);
     const double lg=log(1+e);
-    res      = m + lg;
+    res = m + lg;
     assert(res < epsilon);
     if (res > 0 and res < epsilon ) {
       return 0;
@@ -185,8 +185,8 @@ public:
 //
 // Not super
 void ReadCoverage(const string &covFileName,
-		              const vector<string> &contigNames,
-		              vector<vector<int>> &covBins) {
+                  const vector<string> &contigNames,
+                  vector<vector<int>> &covBins) {
   ifstream covFile{covFileName.c_str()};
   string chrom, curChrom;
   int start, end;
@@ -248,8 +248,8 @@ void ReadCoverage(const string &covFileName,
 }
 
 void WriteSNVs(const string &snvFileName,
-	             const vector<string> &contigNames,
-	             const vector<vector<SNV>> &snvs) {
+               const vector<string> &contigNames,
+               const vector<vector<SNV>> &snvs) {
   ofstream snvOut{snvFileName.c_str()};
   for (int c=0; c < contigNames.size(); c++) {
     for (int i=0; i < snvs[c].size(); i++) {
@@ -264,8 +264,8 @@ void WriteSNVs(const string &snvFileName,
 }
 
 void ReadSNVs(const string &snvFileName,
-	            const vector<string> &contigNames,
-	            vector<vector<SNV>> &snvs) {
+              const vector<string> &contigNames,
+              vector<vector<SNV>> &snvs) {
   snvs.resize(contigNames.size());
   int curContig=0;
   ifstream snvIn{snvFileName};
@@ -517,13 +517,13 @@ void CombineEmissions(const vector<int> &obs,
 
 
 double CSEmisP(int state,
-		int pos,
-		const vector<int> &obs,
-		const vector<SNV> &snvs,
-		const vector<uint8_t> &isCov,
-		const vector<int> &obsIndex,
-		const vector<vector<double>> &emisP,
-		const vector<vector<vector<double>>> &binoP ) {
+               int pos,
+               const vector<int> &obs,
+               const vector<SNV> &snvs,
+               const vector<uint8_t> &isCov,
+               const vector<int> &obsIndex,
+               const vector<vector<double>> &emisP,
+               const vector<vector<vector<double>>> &binoP ) {
   if (isCov[pos]) {
     const int covIndex=obsIndex[pos];
     return emisP[state][obs[covIndex]];
@@ -548,11 +548,11 @@ double CSEmisP(int state,
 }
 
 double ForwardBackwards(const vector<double> &startP,
-			 const vector<vector<double>> &covCovTransP,
-			 const vector<vector<double>> &emisP,
-			 const vector<int> &obs,
-			 vector<vector<double>> &f,
-			 vector<vector<double>> &b) {
+                        const vector<vector<double>> &covCovTransP,
+                        const vector<vector<double>> &emisP,
+                        const vector<int> &obs,
+                        vector<vector<double>> &f,
+                        vector<vector<double>> &b) {
 
   const int totObs    = obs.size();
   const int nCovObs   = obs.size();
@@ -927,17 +927,17 @@ void BaumWelchM(const vector<double> &startP,
   UpdateEmisP(updateEmisP, expEmisP, model);
 }
 
-void viterbi( const vector<double> &startP,
-	      const vector<vector<double>> &covCovTransP,
-	      const vector<vector<double>> &covSnvTransP,
-	      const vector<vector<double>> &snvSnvTransP,
-	      const vector<vector<double>> &emisP,
-	      const vector<vector<vector<double>>> &binoP,
-	      const vector<int> &cov,
-	      const vector<SNV> &snvs,
-	      const vector<uint8_t> &isCov,
-	      const vector<int> &obsIndex,
-	      vector<int> & viterbiPath) {
+void viterbi(const vector<double> &startP,
+             const vector<vector<double>> &covCovTransP,
+             const vector<vector<double>> &covSnvTransP,
+             const vector<vector<double>> &snvSnvTransP,
+             const vector<vector<double>> &emisP,
+             const vector<vector<vector<double>>> &binoP,
+             const vector<int> &cov,
+             const vector<SNV> &snvs,
+             const vector<uint8_t> &isCov,
+             const vector<int> &obsIndex,
+             vector<int> &viterbiPath) {
   /*
   //size_t  nObservations  = observations.size();
   size_t nObs=obsIndex.size();
@@ -1119,8 +1119,11 @@ int StoreSNVs(char *contigSeq, int contigLength, float mean,
 }
 
 int IncrementCounts(bam1_t *b, int contigLength,
-		     vector<int> &nA, vector<int> &nC, vector<int> &nG, vector<int> &nT,
-         vector<int> &nDel) {
+                    vector<int> &nA,
+                    vector<int> &nC,
+                    vector<int> &nG,
+                    vector<int> &nT,
+                    vector<int> &nDel) {
   const int readLength = b->core.l_qseq;
   if (readLength < BIN_LENGTH or b->core.qual < 10 or b->core.flag & 0x800) {
     return 0;
