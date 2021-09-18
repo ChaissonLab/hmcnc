@@ -209,13 +209,15 @@ void ReadCoverage(const string &covFileName,
       i++;
       //      sscanf(&buffer[i], "%d	%d	%d", &start, &end, &cov);
       if (contigName != contigNames[curContig]) {
-	      covBins.push_back(vector<int>());
-	      curContig++;
-	      cerr << "i " << i << "\t" << curContig << endl;
+        covBins.push_back(vector<int>());
+        curContig++;
+        cerr << "i " << i << "\t" << curContig << endl;
       }
       covBins[curContig].push_back(cov);
     }
-    while (i < length and buffer[i] != '\n') { i++;};
+    while (i < length and buffer[i] != '\n') {
+      i++;
+    }
   }
 }
 
@@ -281,7 +283,7 @@ static void printModel(const vector<vector<double> > &transP, ostream *strm)
   for (int r=0;r<transP.size();r++) {
     *strm << r <<":";
     for (int c=0;c<transP[r].size();c++) {
-	    *strm << "\t"<< transP[r][c];
+      *strm << "\t"<< transP[r][c];
     }
     *strm << endl;
   }
@@ -298,10 +300,10 @@ static void printEmissions(const vector<vector<double> > &emisP, ostream *strm)
   *strm << endl;
   for (size_t r=0;r<emisP.size(); r++) {
     for (size_t c=0;c<emisP[r].size(); c++ ) {
-	    *strm << std::setw(7) << std::setprecision(2) << emisP[r][c];
+      *strm << std::setw(7) << std::setprecision(2) << emisP[r][c];
       if (c+1 < emisP[r].size()) {
-	      *strm << "\t";
-	    }
+        *strm << "\t";
+      }
     }
     *strm << endl;
   }
@@ -358,10 +360,10 @@ double LgNegBinom(int cn, int cov, float Hmean, float Hvar) {
     const poisson distribution(MISMAP_RATE*Hmean);
     const double prob=pdf(distribution, cov);
     if (prob == 0) {
-	    result=lepsi;
+      result=lepsi;
     }
     else {
-	    result=max(lepsi, log(prob));
+      result=max(lepsi, log(prob));
     }
   }
   else {
@@ -376,7 +378,7 @@ double LgNegBinom(int cn, int cov, float Hmean, float Hvar) {
       result=lepsi;
     }
     else {
-	    result=max(lepsi, log(prob));
+      result=max(lepsi, log(prob));
     }
   }
   return result;
@@ -434,10 +436,10 @@ double LgPrpoiss(int cn,  int cov, int Hmean) {
     const poisson distribution(cn*Hmean);
     const double prob=pdf(distribution, cov);
     if (prob == 0) {
-	    result=lepsi;
+      result=lepsi;
     }
     else {
-	    result=max(lepsi, log(prob));
+      result=max(lepsi, log(prob));
     }
   }
   return result;
@@ -453,7 +455,7 @@ static void correctModel(vector<vector<double> > &transP,
       sum+= std::exp(transP[i][j]);
     }
     for (int j=0;j<nStates;j++) {
-	    transP[i][j]= log(std::exp(transP[i][j])/sum);
+      transP[i][j]= log(std::exp(transP[i][j])/sum);
     }
   }
 }//correctModel
@@ -579,12 +581,12 @@ double ForwardBackwards( const vector<double> &startP,
     for (int i=0; i < nCovStates; i++) {
       double colSum=0;
       for (int j=0; j < nCovStates; j++) {
-	      assert(j== 0 or colSum != 0);
-	      assert(j < f.size());
-	      assert(k < f[j].size());
-	      assert(j < covCovTransP.size());
-	      assert(i < covCovTransP[j].size());
-	      colSum = PairSumOfLogP(colSum, f[j][k] + covCovTransP[j][i]);
+        assert(j== 0 or colSum != 0);
+        assert(j < f.size());
+        assert(k < f[j].size());
+        assert(j < covCovTransP.size());
+        assert(i < covCovTransP[j].size());
+        colSum = PairSumOfLogP(colSum, f[j][k] + covCovTransP[j][i]);
       }
       assert(obs[k] < emisP[i].size());
       f[i][k+1] = colSum + emisP[i][obs[k]];
@@ -600,9 +602,9 @@ double ForwardBackwards( const vector<double> &startP,
     for (int i=0; i < nCovStates; i++) {
       double colSum=0;
       for (int j=0; j < nCovStates; j++) {
-	      assert(j== 0 or colSum != 0);
-	      assert(prevCovIdx < obs.size()+1);
-	      colSum = PairSumOfLogP(colSum, b[j][k+1] + covCovTransP[j][i] + emisP[j][obs[k]]);
+        assert(j== 0 or colSum != 0);
+        assert(prevCovIdx < obs.size()+1);
+        colSum = PairSumOfLogP(colSum, b[j][k+1] + covCovTransP[j][i] + emisP[j][obs[k]]);
       }
       b[i][k] = colSum;
     }
@@ -664,14 +666,14 @@ double BaumWelchEOnChrom(const vector<double> &startP,
     for (int i=0; i < covCovTransP.size(); i++) {
       covCovTransP[i].resize(covCovTransP[i].size());
       for (int j=0; j < covCovTransP[i].size(); j++) {
-	      logSum = PairSumOfLogP(logSum, f[i][k] + covCovTransP[i][j] + emisP[j][obs[k+1]] + b[j][k+1]);
+        logSum = PairSumOfLogP(logSum, f[i][k] + covCovTransP[i][j] + emisP[j][obs[k+1]] + b[j][k+1]);
       }
     }
     for (int i=0; i < covCovTransP.size(); i++) {
       for (int j=0; j < covCovTransP[i].size(); j++) {
-	      const double pEdge=f[i][k] + covCovTransP[i][j] + emisP[j][obs[k+1]] + b[j][k+1];
-	      assert(isnan(exp(pEdge-logSum)) == false);
-	      expCovCovTransP[i][j] += exp(pEdge - logSum);
+        const double pEdge=f[i][k] + covCovTransP[i][j] + emisP[j][obs[k+1]] + b[j][k+1];
+        assert(isnan(exp(pEdge-logSum)) == false);
+        expCovCovTransP[i][j] += exp(pEdge - logSum);
       }
     }
   }
@@ -831,12 +833,12 @@ void UpdateEmisP(vector<vector<double> > &emisP,
     emisP[i].resize(expEmisP[i].size());
     for (int j=0;j<=maxCov;j++) {
       if (model == POIS or mean > var) {
-	      emisP[i][j]=LgPrpoiss( (int) i , j , (int) mean );
-	      stateSum+=exp(LgPrpoiss( (int) i , j , (int) mean ));
+        emisP[i][j]=LgPrpoiss( (int) i , j , (int) mean );
+        stateSum+=exp(LgPrpoiss( (int) i , j , (int) mean ));
       }
       else {
-	      emisP[i][j]=LgNegBinom((int)i, (int) j, mean, var);
-	      stateSum+=exp(LgNegBinom((int)i, (int) j, mean, var));
+        emisP[i][j]=LgNegBinom((int)i, (int) j, mean, var);
+        stateSum+=exp(LgNegBinom((int)i, (int) j, mean, var));
       }
     }
   }
@@ -1052,7 +1054,7 @@ int StoreSNVs(char *contigSeq,
   if (mean==0) {
     for (int i=0; i < contigLength; i++) {
       for (int j=0; j < fPtr.size(); j++) {
-	      total+=fPtr[j][i];
+        total+=fPtr[j][i];
       }
     }
     mean=((double)total)/contigLength;
@@ -1070,22 +1072,22 @@ int StoreSNVs(char *contigSeq,
     sort(counts.begin(), counts.end());
     const char refNuc=toupper(contigSeq[i]);
     if (counts[4].index != 4 and
-	      counts[3].index != 4 and
-	      refNuc != 'N' and
-	      counts[3].count > 0.25*mean and
-	      counts[4].count > 0.25*mean and
-	      counts[3].count < 2*mean )  {
+        counts[3].index != 4 and
+        refNuc != 'N' and
+        counts[3].count > 0.25*mean and
+        counts[4].count > 0.25*mean and
+        counts[3].count < 2*mean ) {
       //
       // Top most frequent are not a deletion.
       //
       if (nucs[counts[4].index] == refNuc) {
-	      snvs.push_back(SNV(i, refNuc, nucs[counts[3].index], counts[4].count, counts[3].count));
+        snvs.push_back(SNV(i, refNuc, nucs[counts[3].index], counts[4].count, counts[3].count));
       }
       else if (nucs[counts[3].index] == refNuc) {
-	      snvs.push_back(SNV(i, refNuc, nucs[counts[4].index], counts[4].count, counts[3].count));
+        snvs.push_back(SNV(i, refNuc, nucs[counts[4].index], counts[4].count, counts[3].count));
       }
       if (snvs.size() % 100000 == 0) {
-	      cerr << "Stored " << snvs.size() << " at " << i << endl;
+        cerr << "Stored " << snvs.size() << " at " << i << endl;
       }
     }
   }
@@ -1127,24 +1129,24 @@ int IncrementCounts(bam1_t *b,
     if (op == BAM_CDEL) {
       const int stop=refPos+opLen;
       for (; refPos < stop and refPos < contigLength; refPos++) {
-	      nDel[regionOffset]+=1;
-	      regionOffset++;
+        nDel[regionOffset]+=1;
+        regionOffset++;
       }
       continue;
     }
     if (op == BAM_CMATCH or op == BAM_CEQUAL or op == BAM_CDIFF) {
       if (refPos + opLen <= 0) {
-	      refPos += opLen;
-	      qPos += opLen;
-	      continue;
+        refPos += opLen;
+        qPos += opLen;
+        continue;
       }
       else {
-	      for (int p=0; p < opLen; p++) {
-	        if (refPos >= contigLength) {
-	          break;
-	        }
-	        if (refPos >= 1) {
-	          first=false;
+        for (int p=0; p < opLen; p++) {
+          if (refPos >= contigLength) {
+            break;
+          }
+          if (refPos >= 1) {
+            first=false;
             const char nuc=toupper(seq[qPos]);
             assert(regionOffset < nA.size());
             /*
@@ -1156,10 +1158,10 @@ int IncrementCounts(bam1_t *b,
             if (nuc == 'G') { nG[regionOffset]++;}
             if (nuc == 'T') { nT[regionOffset]++;}
             regionOffset++;
-	        }
-	        refPos++;
-	        qPos++;
-	      }
+          }
+          refPos++;
+          qPos++;
+        }
       }
     }
   }
@@ -1203,12 +1205,12 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
     pthread_mutex_lock(threadInfo->semaphore);
     for (int i=0; i < threadInfo->transP->size(); i++) {
       for (int j=0; j < (*threadInfo->transP)[i].size(); j++) {
-	      (*threadInfo->expTransP)[i][j] += expCovCovTransP[i][j];
+        (*threadInfo->expTransP)[i][j] += expCovCovTransP[i][j];
       }
     }
     for (int i=0; i < threadInfo->emisP->size(); i++) {
       for (int j=0; j < (*threadInfo->emisP)[i].size(); j++) {
-	      (*threadInfo->expEmisP)[i][j] += expEmisP[i][j];
+        (*threadInfo->expEmisP)[i][j] += expEmisP[i][j];
       }
     }
 
@@ -1332,7 +1334,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
           const int bin=endpos/BIN_LENGTH;
           (*threadInfo->clipBins)[curSeq][bin] += 1;
         }
-	      bam_destroy1(b);
+        bam_destroy1(b);
       }
     }
     // Never compute in the last bin
@@ -1343,7 +1345,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
       const int end=min((bin+1)*BIN_LENGTH, contigLength);
       int totCov=0;
       for (int bp=start; bp < end; bp++) {
-	      totCov+=nA[bp] + nC[bp] + nG[bp] + nT[bp] + nDel[bp];
+        totCov+=nA[bp] + nC[bp] + nG[bp] + nT[bp] + nDel[bp];
       }
       (*threadInfo->covBins)[curSeq][bin] =totCov/BIN_LENGTH;
     }
@@ -1413,7 +1415,7 @@ int EstimateCoverage(const string &bamFileName, const vector<vector<int> > &allC
     for (int i=0; i < lengths.size(); i++) {
       long totCov=0;
       for (int j=0; j < allCovBins[i].size(); j++ ) {
-	      totCov+=allCovBins[i][j];
+        totCov+=allCovBins[i][j];
       }
       if (totCov > 0 and lengths[i] > maxLen) {
         useChrom = chroms[i];
@@ -1545,7 +1547,7 @@ int EstimateCoverage(const string &bamFileName, const vector<vector<int> > &allC
       //
 
       for (int binIndex=0; binIndex<lastBin; binIndex++) {
-	      totCov+=covBins[binIndex];
+        totCov+=covBins[binIndex];
       }
 
       mean=totCov/lastBin;
@@ -1566,7 +1568,7 @@ int EstimateCoverage(const string &bamFileName, const vector<vector<int> > &allC
              << mean << "\t" << var << endl;
       }
       if (nSamples > 80000) {
-	      return 1;
+        return 1;
       }
     }
   }
@@ -1693,10 +1695,10 @@ void InitParams(vector<vector<double> > &covCovTransP,
     covCovTransP[i].resize(nCovStates);
     for (size_t j=0;j<nCovStates;j++) {
       if(i==j) {
-	      covCovTransP[i][j]  = diag; //log(1 - std::exp(beta) );
+        covCovTransP[i][j]  = diag; //log(1 - std::exp(beta) );
       }
       else {
-	      covCovTransP[i][j] = offDiag;
+        covCovTransP[i][j] = offDiag;
       }
     }
   }
@@ -1706,10 +1708,10 @@ void InitParams(vector<vector<double> > &covCovTransP,
     covSnvTransP[i].resize(nSNVStates);
     for (int j=0; j < nSNVStates; j++) {
       if (i == j + 1) {
-	      covSnvTransP[i][j] = diag;
+        covSnvTransP[i][j] = diag;
       }
       else {
-	      covSnvTransP[i][j] = snvOffDiag;
+        covSnvTransP[i][j] = snvOffDiag;
       }
     }
   }
@@ -1719,10 +1721,10 @@ void InitParams(vector<vector<double> > &covCovTransP,
     snvSnvTransP[i].resize(nSNVStates);
     for (int j=0; j < nSNVStates; j++) {
       if (i == j + 1) {
-	      snvSnvTransP[i][j] = diag;
+        snvSnvTransP[i][j] = diag;
       }
       else {
-	      snvSnvTransP[i][j] = snvOffDiag;
+        snvSnvTransP[i][j] = snvOffDiag;
       }
     }
   }
@@ -1922,10 +1924,10 @@ int main(int argc, const char* argv[]) {
         hmmChrom = argv[argi];
       }
       else if (strcmp(argv[argi], "-M") == 0) {
-	      mergeBins=true;
+        mergeBins=true;
       }
       else if (strcmp(argv[argi], "--earlyExit") == 0) {
-	      ++argi;
+        ++argi;
       }
       else if (strcmp(argv[argi], "--sample") == 0) {
         ++argi;
@@ -1972,8 +1974,8 @@ int main(int argc, const char* argv[]) {
     contigNames.push_back(hmmChrom);
     for (int i=0; i < allContigNames.size(); i++) {
       if (allContigNames[i] == hmmChrom) {
-	      contigLengths.push_back(allContigLengths[i]);
-	      break;
+        contigLengths.push_back(allContigLengths[i]);
+        break;
       }
     }
     if (contigLengths.size() ==  0) {
@@ -2008,7 +2010,7 @@ int main(int argc, const char* argv[]) {
   }
 
   if (snvInFileName != "") {
-      ReadSNVs(snvInFileName, contigNames, snvs);
+    ReadSNVs(snvInFileName, contigNames, snvs);
   }
 
   if (paramInFile != "") {
@@ -2141,12 +2143,12 @@ int main(int argc, const char* argv[]) {
     const int parseChromNProc=min(4,nproc);
     if (nproc > 1) {
       for (int procIndex = 0; procIndex < parseChromNProc; procIndex++) {
-	      pthread_attr_init(&threadAttr[procIndex]);
-	      pthread_create(&threads[procIndex], &threadAttr[procIndex], (void* (*)(void*)) ParseChrom, &threadInfo[procIndex]);
+        pthread_attr_init(&threadAttr[procIndex]);
+        pthread_create(&threads[procIndex], &threadAttr[procIndex], (void* (*)(void*)) ParseChrom, &threadInfo[procIndex]);
       }
 
       for (int procIndex = 0; procIndex < parseChromNProc ; procIndex++) {
-	      pthread_join(threads[procIndex], NULL);
+        pthread_join(threads[procIndex], NULL);
       }
     }
     else {
@@ -2267,10 +2269,10 @@ int main(int argc, const char* argv[]) {
       int totalObs=0;
       curSeq=0;
       for (int procIndex = 0; procIndex < nproc; procIndex++) {
-	      pthread_create(&threads[procIndex], &threadAttr[procIndex], (void* (*)(void*)) ThreadedBWE, &threadInfo[procIndex]);
+        pthread_create(&threads[procIndex], &threadAttr[procIndex], (void* (*)(void*)) ThreadedBWE, &threadInfo[procIndex]);
       }
       for (int procIndex = 0; procIndex < nproc ; procIndex++) {
-	      pthread_join(threads[procIndex], NULL);
+        pthread_join(threads[procIndex], NULL);
       }
       px = pModel;
 
@@ -2316,12 +2318,12 @@ int main(int argc, const char* argv[]) {
         while (snvStart < snvs[c].size() and snvs[c][snvStart].pos < copyIntervals[c][i].start) {
           snvStart++;
         }
-	      int snvEnd=snvStart;
+        int snvEnd=snvStart;
         while (snvEnd < snvs[c].size() and snvs[c][snvEnd].pos < copyIntervals[c][i].end) {
           snvEnd++;
         }
 
-	      double pCN=0, pCN2=0;
+        double pCN=0, pCN2=0;
         for (int cni=snvStart; cni < snvEnd; cni++ ) {
           int ref, alt;
           ref=snvs[c][cni].ref;
