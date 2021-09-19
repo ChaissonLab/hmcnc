@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <numeric>
 #include <limits>
 #include <sstream>
@@ -40,6 +41,38 @@ const float MISMAP_RATE=0.01;
 const double minNeg=-1*numeric_limits<double>::epsilon();
 int MAX_CN=6;
 double lepsi=-800;
+
+struct BamHeaderDeleter
+{
+  void operator()(bam_hdr_t* hdr) const noexcept {
+    bam_hdr_destroy(hdr);
+    hdr = nullptr;
+  }
+};
+
+struct BamRecordDeleter
+{
+  void operator()(bam1_t* b) const noexcept {
+    bam_destroy1(b);
+    b = nullptr;
+  }
+};
+
+struct FastaIndexDeleter
+{
+  void operator()(faidx_t* fai) const noexcept {
+    fai_destroy(fai);
+    fai = nullptr;
+  }
+};
+
+struct HtslibIteratorDeleter
+{
+  void operator()(hts_itr_t* iter) const noexcept {
+    hts_itr_destroy(iter);
+    iter = nullptr;
+  }
+};
 
 void Moments(const vector<double> &v, double &ex, double &var) {
   ex=0;
@@ -1289,7 +1322,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
     char *chromSeq = fai_fetch(threadInfo->fai, region.c_str(), &chromLen);
 
     bool continueParsing=true;
-    vector<bam1_t*> reads; //(bam_init1());
+    vector<std::unique_ptr<bam1_t, BamRecordDeleter>> reads; //(bam_init1());
     long totalSize=0;
     int chunkNumber=0;
     int totalReads=0;
@@ -1301,8 +1334,8 @@ void ParseChrom(ThreadInfo *threadInfo) {
       pthread_mutex_lock(threadInfo->semaphore);
       int bufSize=0;
       while (bufSize < 100000000 and continueParsing) {
-        bam1_t *b = bam_init1();
-        const int res=sam_itr_next(threadInfo->htsfp, regionIter, b);
+        std::unique_ptr<bam1_t, BamRecordDeleter> b(bam_init1());
+        const int res=sam_itr_next(threadInfo->htsfp, regionIter, b.get());
         bufSize+= b->l_data;
         totalSize+= b->l_data;
 
@@ -1316,23 +1349,23 @@ void ParseChrom(ThreadInfo *threadInfo) {
         if (strcmp("m64043_200714_124814/138021154/ccs", bam_get_qname(b)) == 0) {
           cout << "poblem" << '\n';
           }*/
-        endpos=bam_endpos(b);
-        reads.push_back(b);
+        endpos=bam_endpos(b.get());
+        reads.push_back(std::move(b));
         ++totalReads;
       }
       cerr << "Reading " << (*threadInfo->contigNames)[curSeq] << ", chunk " << chunkNumber << ".\t" << reads.size() << "/" << totalReads << " reads/total" << '\n';
       ++chunkNumber;
       pthread_mutex_unlock(threadInfo->semaphore);
 
-      for (bam1_t *b : reads) {
-        IncrementCounts(b, contigLength, nA, nC, nG, nT, nDel);
-        endpos=bam_endpos(b);
+      for (auto& b : reads) {
+        IncrementCounts(b.get(), contigLength, nA, nC, nG, nT, nDel);
+        endpos=bam_endpos(b.get());
         startpos=b->core.pos;
         (*(*threadInfo).totalReads)[curSeq]++;
         (*(*threadInfo).totalBases)[curSeq]+= endpos-startpos;
 
         const int nCigar=b->core.n_cigar;
-        uint32_t*cigar=bam_get_cigar(b);
+        uint32_t*cigar=bam_get_cigar(b.get());
         int frontClip=-1, backClip=-1;
         int frontClipLen=0;
         int backClipLen=0;
@@ -1360,7 +1393,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
           const int bin=endpos/BIN_LENGTH;
           (*threadInfo->clipBins)[curSeq][bin] += 1;
         }
-        bam_destroy1(b);
+        b.reset(nullptr);
       }
     }
     // Never compute in the last bin
@@ -1542,8 +1575,8 @@ int EstimateCoverage(const string &bamFileName,
       int bufSize=0;
       int nReads=0;
       while (bufSize < 100000000 and continueParsing) {
-        bam1_t *b = bam_init1();
-        const int res=sam_itr_next(htsfp, regionIter, b);
+        std::unique_ptr<bam1_t, BamRecordDeleter> b(bam_init1());
+        const int res=sam_itr_next(htsfp, regionIter, b.get());
         bufSize+= b->l_data;
         totalSize+= b->l_data;
 
@@ -1551,10 +1584,9 @@ int EstimateCoverage(const string &bamFileName,
           continueParsing = false;
           break;
         }
-        if (IncrementCounts(b, contigLength, nA, nC, nG, nT, nDel)) {
-          curEndPos=bam_endpos(b);
+        if (IncrementCounts(b.get(), contigLength, nA, nC, nG, nT, nDel)) {
+          curEndPos=bam_endpos(b.get());
         }
-        bam_destroy1(b);
         ++nReads;
       }
 
