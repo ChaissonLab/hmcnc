@@ -66,6 +66,16 @@ struct FastaIndexDeleter
   }
 };
 
+struct HtslibFileDeleter
+{
+  void operator()(htsFile* file) const noexcept {
+    if (file) {
+      hts_close(file);
+    }
+    file = nullptr;
+  }
+};
+
 struct HtslibIteratorDeleter
 {
   void operator()(hts_itr_t* iter) const noexcept {
@@ -187,7 +197,7 @@ public:
 using namespace std;
 class ThreadInfo {
 public:
-  htsFile *htsfp;
+  std::unique_ptr<htsFile, HtslibFileDeleter> htsfp;
   hts_idx_t *bamidx;
   bam_hdr_t *samHeader;
   faidx_t *fai;
@@ -1337,7 +1347,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
       int bufSize=0;
       while (bufSize < 100000000 and continueParsing) {
         std::unique_ptr<bam1_t, BamRecordDeleter> b(bam_init1());
-        const int res=sam_itr_next(threadInfo->htsfp, regionIter.get(), b.get());
+        const int res=sam_itr_next(threadInfo->htsfp.get(), regionIter.get(), b.get());
         bufSize+= b->l_data;
         totalSize+= b->l_data;
 
@@ -1543,24 +1553,23 @@ int EstimateCoverage(const string &bamFileName,
     }
   }
   else {
-    htsFile *htsfp;
+    std::unique_ptr<htsFile,  HtslibFileDeleter> htsfp(hts_open(bamFileName.c_str(),"r"));
     vector<int> covBins;
-    htsfp = hts_open(bamFileName.c_str(),"r");
 
     hts_idx_t *bamidx;
-    if ((bamidx = sam_index_load(htsfp, bamFileName.c_str())) == 0) {
+    if ((bamidx = sam_index_load(htsfp.get(), bamFileName.c_str())) == 0) {
       cerr << "ERROR reading index" << '\n';
       exit(0);
     }
 
-    const htsFormat *fmt = hts_get_format(htsfp);
+    const htsFormat *fmt = hts_get_format(htsfp.get());
     if (fmt == NULL or (fmt->format != sam and fmt->format != bam)) {
       cerr << "Cannot determine format of input reads." << '\n';
       exit(1);
     }
 
     bam_hdr_t *samHeader;
-    samHeader = sam_hdr_read(htsfp);
+    samHeader = sam_hdr_read(htsfp.get());
 
     std::unique_ptr<hts_itr_t, HtslibIteratorDeleter> regionIter(
       sam_itr_querys(bamidx, samHeader, useChrom.c_str()));
@@ -1579,7 +1588,7 @@ int EstimateCoverage(const string &bamFileName,
       int nReads=0;
       while (bufSize < 100000000 and continueParsing) {
         std::unique_ptr<bam1_t, BamRecordDeleter> b(bam_init1());
-        const int res=sam_itr_next(htsfp, regionIter.get(), b.get());
+        const int res=sam_itr_next(htsfp.get(), regionIter.get(), b.get());
         bufSize+= b->l_data;
         totalSize+= b->l_data;
 
@@ -2092,19 +2101,19 @@ int main(int argc, const char* argv[]) {
   //
   // Get the header of the bam file
   //
-  htsFile *htsfp=NULL;
+  std::unique_ptr<htsFile, HtslibFileDeleter> htsfp;
   bam_hdr_t *samHeader=NULL;
   hts_idx_t *bamidx=NULL;
 
 
   if (bamFileName != "") {
-    htsfp = hts_open(bamFileName.c_str(),"r");
-    samHeader = sam_hdr_read(htsfp);
-    if ((bamidx = sam_index_load(htsfp, bamFileName.c_str())) == 0) {
+    htsfp.reset(hts_open(bamFileName.c_str(),"r"));
+    samHeader = sam_hdr_read(htsfp.get());
+    if ((bamidx = sam_index_load(htsfp.get(), bamFileName.c_str())) == 0) {
       cerr << "ERROR reading index" << '\n';
       exit(0);
     }
-    const htsFormat *fmt = hts_get_format(htsfp);
+    const htsFormat *fmt = hts_get_format(htsfp.get());
     if (fmt == NULL or (fmt->format != sam and fmt->format != bam)) {
       cout << "Cannot determine format of input reads." << '\n';
       exit(1);
@@ -2132,10 +2141,7 @@ int main(int argc, const char* argv[]) {
   for (int procIndex = 0; procIndex < nproc ; procIndex++) {
     pthread_attr_init(&threadAttr[procIndex]);
     if (bamFileName != "") {
-      threadInfo[procIndex].htsfp = hts_open(bamFileName.c_str(),"r");
-    }
-    else {
-      threadInfo[procIndex].htsfp = NULL;
+      threadInfo[procIndex].htsfp.reset(hts_open(bamFileName.c_str(),"r"));
     }
     threadInfo[procIndex].bamidx = bamidx;
     threadInfo[procIndex].samHeader=samHeader;
