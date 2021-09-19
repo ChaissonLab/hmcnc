@@ -227,11 +227,11 @@ void ReadCoverage(const string &covFileName,
   int last=0;
   int length;
 
-  covFile.seekg(0, std::ios::end);    // go to the end
-  length = covFile.tellg();           // report location (this is the length)
-  covFile.seekg(0, std::ios::beg);    // go back to the beginning
-  char *buffer = new char[length];    // allocate memory for a buffer of appropriate dimension
-  covFile.read(buffer, length);       // read the whole file into the buffer
+  covFile.seekg(0, std::ios::end);           // go to the end
+  length = covFile.tellg();                  // report location (this is the length)
+  covFile.seekg(0, std::ios::beg);           // go back to the beginning
+  std::vector<char> buffer(length, '\0');    // allocate memory for a buffer of appropriate dimension
+  covFile.read(buffer.data(), length);       // read the whole file into the buffer
   cerr << "read cov buffer of len " << length << '\n';
   covFile.close();
 
