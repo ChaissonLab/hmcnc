@@ -208,7 +208,7 @@ public:
   std::unique_ptr<htsFile, HtslibFileDeleter> htsfp;
   std::shared_ptr<hts_idx_t> bamidx;
   std::shared_ptr<bam_hdr_t> samHeader;
-  faidx_t *fai;
+  std::unique_ptr<faidx_t, FastaIndexDeleter> fai;
   int *lastSeq;
   string refFileName;
   pthread_mutex_t *semaphore;
@@ -1339,7 +1339,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
       sam_itr_querys(threadInfo->bamidx.get(), threadInfo->samHeader.get(), region.c_str()));
 
     int chromLen;
-    char *chromSeq = fai_fetch(threadInfo->fai, region.c_str(), &chromLen);
+    char *chromSeq = fai_fetch(threadInfo->fai.get(), region.c_str(), &chromLen);
 
     bool continueParsing=true;
     vector<std::unique_ptr<bam1_t, BamRecordDeleter>> reads; //(bam_init1());
@@ -2153,7 +2153,7 @@ int main(int argc, const char* argv[]) {
     }
     threadInfo[procIndex].bamidx = bamidx;
     threadInfo[procIndex].samHeader=samHeader;
-    threadInfo[procIndex].fai = fai_load_format(referenceName.c_str(), FAI_FASTA);
+    threadInfo[procIndex].fai.reset(fai_load_format(referenceName.c_str(), FAI_FASTA));
     if (nproc > 1) {
       threadInfo[procIndex].exit = true;
     }
