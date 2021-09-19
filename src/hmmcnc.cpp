@@ -207,7 +207,7 @@ class ThreadInfo {
 public:
   std::unique_ptr<htsFile, HtslibFileDeleter> htsfp;
   std::shared_ptr<hts_idx_t> bamidx;
-  bam_hdr_t *samHeader;
+  std::shared_ptr<bam_hdr_t> samHeader;
   faidx_t *fai;
   int *lastSeq;
   string refFileName;
@@ -1336,7 +1336,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
     const string region=regionStrm.str();
 
     std::unique_ptr<hts_itr_t, HtslibIteratorDeleter> regionIter(
-      sam_itr_querys(threadInfo->bamidx.get(), threadInfo->samHeader, region.c_str()));
+      sam_itr_querys(threadInfo->bamidx.get(), threadInfo->samHeader.get(), region.c_str()));
 
     int chromLen;
     char *chromSeq = fai_fetch(threadInfo->fai, region.c_str(), &chromLen);
@@ -1576,11 +1576,10 @@ int EstimateCoverage(const string &bamFileName,
       exit(1);
     }
 
-    bam_hdr_t *samHeader;
-    samHeader = sam_hdr_read(htsfp.get());
+    std::unique_ptr<bam_hdr_t, BamHeaderDeleter> samHeader(sam_hdr_read(htsfp.get()));
 
     std::unique_ptr<hts_itr_t, HtslibIteratorDeleter> regionIter(
-      sam_itr_querys(bamidx.get(), samHeader, useChrom.c_str()));
+      sam_itr_querys(bamidx.get(), samHeader.get(), useChrom.c_str()));
 
     vector<int> nA(contigLength, 0), nC(contigLength, 0), nT(contigLength, 0), nG(contigLength,0), nDel(contigLength, 0);
 
@@ -2110,13 +2109,13 @@ int main(int argc, const char* argv[]) {
   // Get the header of the bam file
   //
   std::unique_ptr<htsFile, HtslibFileDeleter> htsfp;
-  bam_hdr_t *samHeader=NULL;
+  std::shared_ptr<bam_hdr_t> samHeader;
   std::shared_ptr<hts_idx_t> bamidx;
 
 
   if (bamFileName != "") {
     htsfp.reset(hts_open(bamFileName.c_str(),"r"));
-    samHeader = sam_hdr_read(htsfp.get());
+    samHeader.reset(sam_hdr_read(htsfp.get()), BamHeaderDeleter{});;
     bamidx.reset(sam_index_load(htsfp.get(), bamFileName.c_str()), HtslibIndexDeleter{});
     if (bamidx == nullptr) {
       cerr << "ERROR reading index" << '\n';
