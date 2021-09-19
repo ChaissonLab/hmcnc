@@ -1317,7 +1317,9 @@ void ParseChrom(ThreadInfo *threadInfo) {
 
     const string region=regionStrm.str();
 
-    hts_itr_t *regionIter = sam_itr_querys(threadInfo->bamidx, threadInfo->samHeader, region.c_str());
+    std::unique_ptr<hts_itr_t, HtslibIteratorDeleter> regionIter(
+      sam_itr_querys(threadInfo->bamidx, threadInfo->samHeader, region.c_str()));
+
     int chromLen;
     char *chromSeq = fai_fetch(threadInfo->fai, region.c_str(), &chromLen);
 
@@ -1335,7 +1337,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
       int bufSize=0;
       while (bufSize < 100000000 and continueParsing) {
         std::unique_ptr<bam1_t, BamRecordDeleter> b(bam_init1());
-        const int res=sam_itr_next(threadInfo->htsfp, regionIter, b.get());
+        const int res=sam_itr_next(threadInfo->htsfp, regionIter.get(), b.get());
         bufSize+= b->l_data;
         totalSize+= b->l_data;
 
@@ -1560,7 +1562,8 @@ int EstimateCoverage(const string &bamFileName,
     bam_hdr_t *samHeader;
     samHeader = sam_hdr_read(htsfp);
 
-    hts_itr_t *regionIter = sam_itr_querys(bamidx, samHeader, useChrom.c_str());
+    std::unique_ptr<hts_itr_t, HtslibIteratorDeleter> regionIter(
+      sam_itr_querys(bamidx, samHeader, useChrom.c_str()));
 
     vector<int> nA(contigLength, 0), nC(contigLength, 0), nT(contigLength, 0), nG(contigLength,0), nDel(contigLength, 0);
 
@@ -1576,7 +1579,7 @@ int EstimateCoverage(const string &bamFileName,
       int nReads=0;
       while (bufSize < 100000000 and continueParsing) {
         std::unique_ptr<bam1_t, BamRecordDeleter> b(bam_init1());
-        const int res=sam_itr_next(htsfp, regionIter, b.get());
+        const int res=sam_itr_next(htsfp, regionIter.get(), b.get());
         bufSize+= b->l_data;
         totalSize+= b->l_data;
 
