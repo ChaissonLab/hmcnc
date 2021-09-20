@@ -2440,6 +2440,8 @@ int hmcnc(int argc, const char* argv[]) {
     outPtr = &cout;
   }
   WriteVCF(*outPtr, referenceName, sampleName, contigNames, contigLengths, copyIntervals);
+
+  return 0;
 }
 
 int hmcnc_test() { return 42; }
