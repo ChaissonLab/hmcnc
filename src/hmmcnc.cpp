@@ -45,32 +45,28 @@ const double minNeg=-1*numeric_limits<double>::epsilon();
 int MAX_CN=6;
 double lepsi=-800;
 
-struct BamHeaderDeleter
-{
+struct BamHeaderDeleter {
   void operator()(bam_hdr_t* hdr) const noexcept {
     bam_hdr_destroy(hdr);
     hdr = nullptr;
   }
 };
 
-struct BamRecordDeleter
-{
+struct BamRecordDeleter {
   void operator()(bam1_t* b) const noexcept {
     bam_destroy1(b);
     b = nullptr;
   }
 };
 
-struct FastaIndexDeleter
-{
+struct FastaIndexDeleter {
   void operator()(faidx_t* fai) const noexcept {
     fai_destroy(fai);
     fai = nullptr;
   }
 };
 
-struct HtslibFileDeleter
-{
+struct HtslibFileDeleter {
   void operator()(htsFile* file) const noexcept {
     if (file) {
       hts_close(file);
@@ -79,16 +75,14 @@ struct HtslibFileDeleter
   }
 };
 
-struct HtslibIndexDeleter
-{
+struct HtslibIndexDeleter {
   void operator()(hts_idx_t* index) const noexcept {
     hts_idx_destroy(index);
     index = nullptr;
   }
 };
 
-struct HtslibIteratorDeleter
-{
+struct HtslibIteratorDeleter {
   void operator()(hts_itr_t* iter) const noexcept {
     hts_itr_destroy(iter);
     iter = nullptr;
@@ -106,36 +100,32 @@ void Moments(const vector<double> &v, double &ex, double &var) {
   }
 }
 
-typedef enum { POIS, NEG_BINOM  } MODEL_TYPE;
 
-class SNV {
-public:
-  int pos;
-  char refNuc = '\0';
-  char altNuc = '\0';
-  int ref = 0;
-  int alt = 0;
+// -----------
+// SNV
+// -----------
 
-  SNV() {
-    assert(0);
-  }
+SNV::SNV() {
+  assert(0);
+}
 
-  SNV(int p, int r, int a, int rc, int ac)
-    : pos(p)
-    , refNuc(r)
-    , altNuc(a)
-    , ref(rc)
-    , alt(ac)
-  { }
+SNV::SNV(int p, int r, int a, int rc, int ac)
+  : pos(p)
+  , refNuc(r)
+  , altNuc(a)
+  , ref(rc)
+  , alt(ac)
+{ }
 
-  SNV(int p)
-    : pos(p)
-  { }
+SNV::SNV(int p)
+  : pos(p)
+{ }
 
-  int operator<(const SNV &rhs) const {
-    return pos < rhs.pos;
-  }
-};
+bool SNV::operator<(const SNV &rhs) const {
+  return pos < rhs.pos;
+}
+
+// -----------
 
 void Reset(vector<vector<double> > &v) {
   for (auto &e : v) {
@@ -185,25 +175,24 @@ double SumOfLogP(const vector<double> &vals) {
   return maxVal+log(expSum);
 }
 
-class Interval {
-public:
-  Interval(int s, int e, int cn, float avg, double p)
-    : start(s)
-    , end(e)
-    , copyNumber(cn)
-    , averageCoverage(avg)
-    , pVal(p)
-  {
-    filter="PASS";
-  }
+// -----------
+// Interval
+// -----------
 
-  Interval() { assert(0);}
+Interval::Interval() {
+  assert(0);
+}
 
-  int start, end, copyNumber;
-  float averageCoverage;
-  double pVal;
-  string filter;
-};
+Interval::Interval(int s, int e, int cn, float avg, double p)
+  : start(s)
+  , end(e)
+  , copyNumber(cn)
+  , averageCoverage(avg)
+  , pVal(p)
+  , filter("PASS")
+{ }
+
+// -----------
 
 using namespace std;
 class ThreadInfo {
@@ -901,7 +890,7 @@ void WriteVCF(ostream &out,
 
 void UpdateEmisP(vector<vector<double>> &emisP,
                  vector<vector<double>> &expEmisP,
-                 int model=NEG_BINOM) {
+                 int model) {
   const int nCovStates=emisP.size();
   for (int i=1;i<nCovStates;i++) {
     double mean, var;
@@ -923,17 +912,17 @@ void UpdateEmisP(vector<vector<double>> &emisP,
 }
 
 void BaumWelchM(const vector<double> &startP,
-		const vector<vector<double> > &transP,
-		const vector<vector<double> > &emisP,
-		const vector<vector<vector< double> > > &binoP,
+		const vector<vector<double>> &transP,
+		const vector<vector<double>> &emisP,
+		const vector<vector<vector<double>>> &binoP,
 		int model,
 		const vector<long> &stateTotCov,
 		const vector<long> &stateNCov,
-		const vector<vector<double> > &expTransP,
-		vector<vector<double> > &expEmisP,
-		vector<vector<double> > &covCovPrior,
-		vector<vector<double> > &updateTransP,
-		vector<vector<double> > &updateEmisP) {
+		const vector<vector<double>> &expTransP,
+		vector<vector<double>> &expEmisP,
+		vector<vector<double>> &covCovPrior,
+		vector<vector<double>> &updateTransP,
+		vector<vector<double>> &updateEmisP) {
 
   //
   // M step.
