@@ -1,23 +1,23 @@
-hmmcnc_tests_cpp = files([
-  'test_hmmcnc.cpp',
+hmcnc_tests_cpp = files([
+  'test_hmcnc.cpp',
   '../src/hmmcnc.cpp'
 ])
 
-hmmcnc_gtest_dep = dependency(
+hmcnc_gtest_dep = dependency(
   'gtest',
   main: true,
   fallback: ['gtest', 'gtest_main_dep']
 )
 
-hmmcnc_test = executable(
-  'hmmcnc_test',
-  hmmcnc_tests_cpp,
-  dependencies : [hmcnc_lib_deps, hmmcnc_gtest_dep],
+hmcnc_test = executable(
+  'hmcnc_test',
+  hmcnc_tests_cpp,
+  dependencies : [hmcnc_lib_deps, hmcnc_gtest_dep],
   cpp_args : hmcnc_cpp_args,
   install : false
 )
 
 test(
-  'hmmcnc unit tests',
-  hmmcnc_test,
+  'hmcnc unit tests',
+  hmcnc_test,
 )

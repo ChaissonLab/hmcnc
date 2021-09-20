@@ -25,6 +25,7 @@
 #include <boost/math/distributions/binomial.hpp>
 
 #include "../include/LiftOver.h"
+#include "../include/hmcnc.h"
 
 using boost::math::binomial;
 
@@ -1901,7 +1902,7 @@ void PrintHelp() {
        << " -h help            Print this help message." << '\n';
 }
 
-int hmmcnc(int argc, const char* argv[]) {
+int hmcnc(int argc, const char* argv[]) {
   int nproc=4;
   double scale=2;
 
@@ -2451,4 +2452,4 @@ int hmmcnc(int argc, const char* argv[]) {
   WriteVCF(*outPtr, referenceName, sampleName, contigNames, contigLengths, copyIntervals);
 }
 
-int hmmcnc_test() { return 42; }
+int hmcnc_test() { return 42; }

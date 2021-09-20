@@ -1,5 +1,5 @@
-#include "../include/hmmcnc.h"
+#include "../include/hmcnc.h"
 
 int main(int argc, const char* argv[]) {
-  return hmmcnc(argc, argv);
+  return hmcnc(argc, argv);
 }
