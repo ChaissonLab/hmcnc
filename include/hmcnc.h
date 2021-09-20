@@ -33,7 +33,7 @@ struct SNV {
   SNV(int p, int r, int a, int rc, int ac);
   SNV(int p);
 
-  bool operator<(const SNV &rhs) const
+  bool operator<(const SNV &rhs) const;
 };
 
 // ----------------------
