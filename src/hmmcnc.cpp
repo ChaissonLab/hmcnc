@@ -24,6 +24,8 @@
 #include <boost/math/distributions/negative_binomial.hpp>
 #include <boost/math/distributions/binomial.hpp>
 
+#include "../include/LiftOver.h"
+
 using boost::math::binomial;
 
 using boost::math::poisson;
@@ -1899,7 +1901,7 @@ void PrintHelp() {
        << " -h help            Print this help message." << '\n';
 }
 
-int main(int argc, const char* argv[]) {
+int hmmcnc(int argc, const char* argv[]) {
   int nproc=4;
   double scale=2;
 
@@ -2448,3 +2450,5 @@ int main(int argc, const char* argv[]) {
   }
   WriteVCF(*outPtr, referenceName, sampleName, contigNames, contigLengths, copyIntervals);
 }
+
+int hmmcnc_test() { return 42; }

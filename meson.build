@@ -64,3 +64,4 @@ hmcnc_lib_deps = [
 #####################
 
 subdir('src')
+subdir('tests')

@@ -7,6 +7,7 @@ hmcnc_cpp_sources = files([
      'hmcnc',
      files([
         'hmmcnc.cpp',
+        'main.cpp'
          ]),
      install : true,
      dependencies : hmcnc_lib_deps,
