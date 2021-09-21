@@ -24,6 +24,7 @@
 #include <boost/math/distributions/negative_binomial.hpp>
 #include <boost/math/distributions/binomial.hpp>
 
+#include "../include/CLI11.hpp"
 #include "../include/LiftOver.h"
 #include "../include/hmcnc.h"
 
@@ -1869,194 +1870,193 @@ void InitParams(vector<vector<double>> &covCovTransP,
   }
 }
 
-void PrintHelp() {
-  cerr << "usage: hmmcnc reference.fa" << '\n'
-       << "   -a alignments    Read alignments from this file and calculate depth on the fly." << '\n'
-       << "   -b bed           Read depth bed from this file. Skip calculation of depth." << '\n'
-       << "   -s snv-file      Read SNVs from this file (when not estimating from a BAM)" << '\n'
-       << "   -p parameter     Read parameter file (do not train with Baum-Welch)" << '\n'
-       << " Options controlling depth calculation " << '\n'
-       << "   -e value (float)   Value of log-epsilon (-500)." << '\n'
-       << "   -m value [pois|nb] Coverage model to use, Poisson (pois), or negative binomial (nb). Default nb." << '\n'
-       << "   -x value Max state to allow (10)" << '\n'
-       << " -t value (int)     Number of threads (4) " << '\n'
-       << " -c contig          Use this contig to estimate coverage. By default, longest contig." << '\n'
-       << " Options controlling output:" << '\n'
-       << " -o file            Output vcf to this file (stdout)." << '\n'
-       << " --Sample           use this sample name in the vcf (sample)" << '\n'
-	     << " -C contig          Only run hmm on this chrom." << '\n'
-       << " -B bed             Write coverage bed to this file." << '\n'
-       << " -P model           Write trained parameter file." << '\n'
-       << " -M (flag)          Merge consecutive bins with the same copy number." << '\n'
-       << " -S snvs            Write SNVs to this file." << '\n'
-       << " -h help            Print this help message." << '\n';
-}
+struct Parameters {
+
+  // positional arg
+  std::string referenceName;
+
+  // options
+  std::string bamFileName;
+  std::string snvInFileName;
+  std::string snvOutFileName;
+  std::string paramInFile;
+  std::string paramOutFile;
+  std::string covBedInFileName;
+  std::string covBedOutFileName;
+  std::string clipInFileName;
+  std::string clipOutFileName;
+  std::string outFileName;
+  std::string useChrom;
+  std::string hmmChrom;
+
+  int nproc = 4;
+  MODEL_TYPE model = NEG_BINOM;
+  bool mergeBins=false;
+  std::string sampleName;
+
+  CLI::App CLI;
+  std::string modelString;
+
+  Parameters()
+    : sampleName{"sample"}
+    , CLI{"Hidden Markov Copy Number Caller\n"}
+  {
+    //
+    // Positional args
+    //
+    CLI.add_option("reference", referenceName,
+      "Read reference from this FASTA file.")->
+      type_name("FILE")->
+      required();
+
+    //
+    // Input options
+    //
+    const std::string inputGroupName{"Input"};
+    CLI.add_option("-a", bamFileName,
+      "Read alignments from this BAM file and calculate depth on the fly.")->
+      group(inputGroupName)->
+      type_name("FILE");
+
+    CLI.add_option("-b", covBedInFileName,
+      "Read depth bed from this file (skip calculation of depth).")->
+      group(inputGroupName)->
+      type_name("FILE");
+
+    CLI.add_option("-s", snvInFileName,
+      "Read SNVs from this file (when not estimating from a BAM).")->
+      group(inputGroupName)->
+      type_name("FILE");
+
+    CLI.add_option("-p", paramInFile,
+      "Read parameter file (do not train with Baum-Welch).")->
+      group(inputGroupName)->
+      type_name("FILE");
+
+    CLI.add_option("-l", clipInFileName,
+      "    ** Need description for clipInFileName ** ")->
+      group(inputGroupName)->
+      type_name("FILE");
+
+    //
+    // Depth calculation options
+    //
+    const std::string depthGroupName{"Depth Calculation"};
+    CLI.add_option("-e",lepsi,
+      "Value of log-epsilon. [-800]")->
+      group(depthGroupName);
+
+    CLI.add_option("-m", modelString,
+      "Coverage model to use: Poisson (pois), or negative binomial (nb). [nb]")->
+      group(depthGroupName);
+
+    CLI.add_option("-t", nproc,
+      "Number of threads. [4]")->
+      group(depthGroupName);
+
+    CLI.add_option("-c", useChrom,
+      "Use this contig to estimate coverage. By default, longest contig.")->
+      group(depthGroupName);
+
+    //
+    // Output options
+    //
+    const std::string outputGroupName{"Output"};
+    CLI.add_option("-o", outFileName,
+      "Output vcf to this file. Write to stdout if not provided.")->
+      group(outputGroupName)->
+      type_name("FILE");
+
+    CLI.add_option("--sample", sampleName,
+      "Sample name in the vcf ['sample']")->
+      group(outputGroupName)->
+      ignore_case();
+
+    CLI.add_option("-M", mergeBins,
+      "Merge consecutive bins with the same copy number.")->
+      group(outputGroupName)->
+      type_name("");
+
+    CLI.add_option("-C", hmmChrom,
+      "Only run hmm on this chrom.")->
+      group(outputGroupName);
+
+    CLI.add_option("-B", covBedOutFileName,
+      "Write coverage bed to this file.")->
+      group(outputGroupName)->
+      type_name("FILE");
+
+    CLI.add_option("-P", paramOutFile,
+      "Write trained parameter file.")->
+      group(outputGroupName)->
+      type_name("FILE");
+
+    CLI.add_option("-L", clipOutFileName,
+      "    ** Need description for clipOutFileName **  ")->
+      group(outputGroupName)->
+      type_name("FILE");
+
+    CLI.add_option("-S", snvOutFileName,
+      "Write SNVs to this file.")->
+      group(outputGroupName)->
+      type_name("FILE");
+
+    //
+    // Post-parsing sanity checks
+    //
+    CLI.callback([this]() {
+      if (this->modelString == "pois") {
+        this->model = POIS;
+      }
+      if (this->covBedInFileName != "" and this->covBedOutFileName != "") {
+        cerr << "ERROR. Cannot specify -b and -B.\n";
+        exit(1);
+      }
+      if (this->covBedInFileName == "" and this->bamFileName == "") {
+        cerr << "ERROR. Must specify either a coverage file or a bam file\n";
+        exit(1);
+      }
+    });
+  }
+};
 
 int hmcnc(int argc, const char* argv[]) {
-  int nproc=4;
+
   double scale=2;
 
-  if (argc < 3) {
-    PrintHelp();
-    exit(1);
-  }
   NucMap.resize(256,4);
   NucMap[(int)'A']=0;
   NucMap[(int)'C']=1;
   NucMap[(int)'G']=2;
   NucMap[(int)'T']=3;
+
   int maxState=10;
-  string bamFileName;
-  if (strcmp(argv[1], "-h") == 0) {
-    PrintHelp();
-    exit(1);
-  }
-  string referenceName=argv[1];
-
-  MODEL_TYPE model=NEG_BINOM;
-  string useChrom;
-  string hmmChrom;
-  string covBedInFileName, covBedOutFileName;
-  bool   mergeBins=false;
-  string outBedName;
-  string outFileName;
-  string snvFile;
-  string paramInFile;
-  string paramOutFile;
-  string hmmContig;
-  string snvInFileName, snvOutFileName;
-  string clipInFileName, clipOutFileName;
-  string sampleName="sample";
   int averageReadLength=0;
-  if (argc > 2) {
-    int argi=2;
-    while (argi < argc) {
-      if (strcmp(argv[argi], "-a") == 0) {
-        ++argi;
-        bamFileName=argv[argi];
-      }
-      else if (strcmp(argv[argi], "-s") == 0) {
-        ++argi;
-        snvInFileName=argv[argi];
-      }
-      else if (strcmp(argv[argi], "-S") == 0) {
-        ++argi;
-        snvOutFileName=argv[argi];
-      }
-      else if (strcmp(argv[argi], "-t") == 0) {
-        ++argi;
-        nproc=atoi(argv[argi]);
-      }
-      else if (strcmp(argv[argi], "-p") == 0) {
-        ++argi;
-        paramInFile=argv[argi];
-      }
-      else if (strcmp(argv[argi], "-P") == 0) {
-        ++argi;
-        paramOutFile=argv[argi];
-      }
-      else if (strcmp(argv[argi], "-b") == 0) {
-        ++argi;
-        covBedInFileName = argv[argi];
-      }
-      else if (strcmp(argv[argi], "-B") == 0) {
-        ++argi;
-        covBedOutFileName = argv[argi];
-      }
-      else if (strcmp(argv[argi], "-e") == 0) {
-        ++argi;
-        lepsi=atof(argv[argi]);
-      }
-      else if (strcmp(argv[argi], "--scale") == 0) {
-        ++argi;
-        scale=atof(argv[argi]);
-      }
-      else if (strcmp(argv[argi], "-m") == 0) {
-        ++argi;
-        if (strcmp(argv[argi], "pois") == 0) {
-          model=POIS;
-        }
-      }
-      else if (strcmp(argv[argi], "-l") == 0) {
-        ++argi;
-        clipInFileName=argv[argi];
-      }
-      else if (strcmp(argv[argi], "-L") == 0) {
-        ++argi;
-        clipOutFileName=argv[argi];
-      }
-      else if (strcmp(argv[argi], "-o") == 0) {
-        ++argi;
-        outFileName = argv[argi];
-      }
-      /*      else if (strcmp(argv[argi], "-h") == 0) {
-	++argi;
-	hmmContig = argv[argi];
-	}*/
-      else if (strcmp(argv[argi], "-c") == 0) {
-        ++argi;
-        useChrom = argv[argi];
-      }
-      else if (strcmp(argv[argi], "-C") == 0) {
-        ++argi;
-        hmmChrom = argv[argi];
-      }
-      else if (strcmp(argv[argi], "-M") == 0) {
-        mergeBins=true;
-      }
-      else if (strcmp(argv[argi], "--earlyExit") == 0) {
-        ++argi;
-      }
-      else if (strcmp(argv[argi], "--sample") == 0) {
-        ++argi;
-        sampleName=argv[argi];
-      }
-      else if (strcmp(argv[argi], "-h") == 0) {
-        PrintHelp();
-        exit(1);
-      }
-      else {
-        PrintHelp();
-        cerr << "Invalid argument " << argv[argi] << '\n';
-        exit(1);
-      }
-      ++argi;
-    }
-  }
-  //
-  // Check some command line sanity.
-  //
 
-  if (covBedInFileName != "" and covBedOutFileName != "") {
-    cerr << "ERROR. Cannot specify -b and -B." << '\n';
-    exit(1);
-  }
-  if (covBedInFileName == "" and bamFileName == "") {
-    cerr << "ERROR. Must specify either a coverage file or a bam file" << '\n';
-    exit(1);
-  }
+  Parameters params;
+  CLI11_PARSE(params.CLI, argc, argv);
 
-  const string faiFileName{referenceName + ".fai"};
+  const string faiFileName{params.referenceName + ".fai"};
   vector<string> contigNames, allContigNames;
   vector<int>    contigLengths, allContigLengths;
   //
   // Determine what chroms to operate on.
   //
   ReadFai(faiFileName, allContigNames, allContigLengths);
-  if (hmmChrom == "") {
+  if (params.hmmChrom == "") {
     contigNames = allContigNames;
     contigLengths = allContigLengths;
   }
   else {
-    contigNames.push_back(hmmChrom);
+    contigNames.push_back(params.hmmChrom);
     for (size_t i=0; i < allContigNames.size(); i++) {
-      if (allContigNames[i] == hmmChrom) {
+      if (allContigNames[i] == params.hmmChrom) {
         contigLengths.push_back(allContigLengths[i]);
         break;
       }
     }
     if (contigLengths.size() == 0) {
-      cerr << "ERROR. Could not find contig for hmm " << hmmContig << '\n';
+      cerr << "ERROR. Could not find contig for hmm " << params.hmmChrom << '\n';
       exit(1);
     }
   }
@@ -2080,20 +2080,20 @@ int hmcnc(int argc, const char* argv[]) {
   vector<int> nReads;
   vector<long> totalBases;
 
-  if (covBedInFileName != "") {
-    ReadCoverage(covBedInFileName, contigNames, covBins);
+  if (params.covBedInFileName != "") {
+    ReadCoverage(params.covBedInFileName, contigNames, covBins);
   }
 
-  if (clipInFileName != "") {
-    ReadCoverage(clipInFileName, contigNames, clipBins);
+  if (params.clipInFileName != "") {
+    ReadCoverage(params.clipInFileName, contigNames, clipBins);
   }
 
-  if (snvInFileName != "") {
-    ReadSNVs(snvInFileName, contigNames, snvs);
+  if (params.snvInFileName != "") {
+    ReadSNVs(params.snvInFileName, contigNames, snvs);
   }
 
-  if (paramInFile != "") {
-     ReadParameterFile(paramInFile, nStates,
+  if (params.paramInFile != "") {
+     ReadParameterFile(params.paramInFile, nStates,
 		       mean, var, maxState, maxCov,
 		       startP, covCovTransP, emisP);
   }
@@ -2106,10 +2106,10 @@ int hmcnc(int argc, const char* argv[]) {
   std::shared_ptr<hts_idx_t> bamidx;
 
 
-  if (bamFileName != "") {
-    htsfp.reset(hts_open(bamFileName.c_str(),"r"));
+  if (params.bamFileName != "") {
+    htsfp.reset(hts_open(params.bamFileName.c_str(),"r"));
     samHeader.reset(sam_hdr_read(htsfp.get()), BamHeaderDeleter{});;
-    bamidx.reset(sam_index_load(htsfp.get(), bamFileName.c_str()), HtslibIndexDeleter{});
+    bamidx.reset(sam_index_load(htsfp.get(), params.bamFileName.c_str()), HtslibIndexDeleter{});
     if (bamidx == nullptr) {
       cerr << "ERROR reading index" << '\n';
       exit(0);
@@ -2125,13 +2125,13 @@ int hmcnc(int argc, const char* argv[]) {
   // Read index for random io
   //
 
-  nproc = min(nproc, static_cast<int>(contigNames.size()));
+  params.nproc = min(params.nproc, static_cast<int>(contigNames.size()));
 
-  pthread_t *threads = new pthread_t[nproc];
-  vector<ThreadInfo> threadInfo(nproc);
+  pthread_t *threads = new pthread_t[params.nproc];
+  vector<ThreadInfo> threadInfo(params.nproc);
   pthread_mutex_t semaphore;
   pthread_mutex_init(&semaphore, NULL);
-  pthread_attr_t *threadAttr = new pthread_attr_t[nproc];
+  pthread_attr_t *threadAttr = new pthread_attr_t[params.nproc];
   int curSeq=0;
   vector<vector<Interval>> copyIntervals;
   copyIntervals.resize(contigNames.size());
@@ -2139,15 +2139,15 @@ int hmcnc(int argc, const char* argv[]) {
   totalBases.resize(contigNames.size());
   double pModel=0;
 
-  for (int procIndex = 0; procIndex < nproc ; procIndex++) {
+  for (int procIndex = 0; procIndex < params.nproc ; procIndex++) {
     pthread_attr_init(&threadAttr[procIndex]);
-    if (bamFileName != "") {
-      threadInfo[procIndex].htsfp.reset(hts_open(bamFileName.c_str(),"r"));
+    if (params.bamFileName != "") {
+      threadInfo[procIndex].htsfp.reset(hts_open(params.bamFileName.c_str(),"r"));
     }
     threadInfo[procIndex].bamidx = bamidx;
     threadInfo[procIndex].samHeader=samHeader;
-    threadInfo[procIndex].fai.reset(fai_load_format(referenceName.c_str(), FAI_FASTA));
-    if (nproc > 1) {
+    threadInfo[procIndex].fai.reset(fai_load_format(params.referenceName.c_str(), FAI_FASTA));
+    if (params.nproc > 1) {
       threadInfo[procIndex].exit = true;
     }
     else {
@@ -2183,7 +2183,7 @@ int hmcnc(int argc, const char* argv[]) {
   //
   copyNumber.resize(contigLengths.size());
 
-  if (paramInFile == "") {
+  if (params.paramInFile == "") {
     //max cov value observed or upper cov bound -> max nState---------------
     nStates= std::min( maxState , MAX_CN  ) + 1; //+1 zeroth state
     MAX_CN=nStates+1;
@@ -2196,16 +2196,16 @@ int hmcnc(int argc, const char* argv[]) {
   //
   // Allocate coverage bins if not reading
   //
-  if (snvInFileName == "") {
+  if (params.snvInFileName == "") {
     snvs.resize(contigLengths.size());
   }
-  if (clipInFileName == "") {
+  if (params.clipInFileName == "") {
     clipBins.resize(contigLengths.size());
     for (size_t c=0; c < contigLengths.size(); c++ ) {
       clipBins[c].resize(contigLengths[c]/BIN_LENGTH);
     }
   }
-  if (covBedInFileName == "") {
+  if (params.covBedInFileName == "") {
     covBins.resize(contigLengths.size());
 
     for (size_t c=0; c < contigLengths.size(); c++ ) {
@@ -2217,8 +2217,8 @@ int hmcnc(int argc, const char* argv[]) {
     //
     // Compute coverage from bam.
     //
-    const int parseChromNProc=min(4,nproc);
-    if (nproc > 1) {
+    const int parseChromNProc=min(4,params.nproc);
+    if (params.nproc > 1) {
       for (int procIndex = 0; procIndex < parseChromNProc; procIndex++) {
         pthread_attr_init(&threadAttr[procIndex]);
         pthread_create(&threads[procIndex], &threadAttr[procIndex], (void* (*)(void*)) ParseChrom, &threadInfo[procIndex]);
@@ -2237,18 +2237,18 @@ int hmcnc(int argc, const char* argv[]) {
     totalReadsSum=accumulate(nReads.begin(), nReads.end(), 0);
     averageReadLength=totalBaseSum/totalReadsSum;
     cerr << "Length cutoff of average read length " << averageReadLength << '\n';
-    if (covBedOutFileName != "" ) {
-      WriteCovBed(covBedOutFileName, contigNames, covBins);
+    if (params.covBedOutFileName != "" ) {
+      WriteCovBed(params.covBedOutFileName, contigNames, covBins);
     }
-    if (clipOutFileName != "") {
-      WriteCovBed(clipOutFileName, contigNames, clipBins);
+    if (params.clipOutFileName != "") {
+      WriteCovBed(params.clipOutFileName, contigNames, clipBins);
     }
-    if (snvOutFileName != "") {
-      WriteSNVs(snvOutFileName, contigNames, snvs);
+    if (params.snvOutFileName != "") {
+      WriteSNVs(params.snvOutFileName, contigNames, snvs);
     }
   }
 
-  EstimateCoverage(bamFileName, covBins, allContigNames, allContigLengths, useChrom, mean, var);
+  EstimateCoverage(params.bamFileName, covBins, allContigNames, allContigLengths, params.useChrom, mean, var);
 
   //
   // Cap coverage where hmm does not bother calculating.
@@ -2309,10 +2309,10 @@ int hmcnc(int argc, const char* argv[]) {
   //mean no. of bins for cn=3 call
   const int nSNVStates=3;
   const double unif=log(1.0/nStates);
-  if (paramInFile == "") {
+  if (params.paramInFile == "") {
     InitParams(covCovTransP, covSnvTransP, snvSnvTransP,
 	       nStates, nSNVStates, log(1-exp(small)), log(exp(small)/(nStates-1)),
-	       emisP, model, maxCov, mean, var, binoP);
+	       emisP, params.model, maxCov, mean, var, binoP);
     printModel(covCovTransP, &cerr);
     //    printEmissions(emisP);
 
@@ -2345,10 +2345,10 @@ int hmcnc(int argc, const char* argv[]) {
       double px=0;
       int totalObs=0;
       curSeq=0;
-      for (int procIndex = 0; procIndex < nproc; procIndex++) {
+      for (int procIndex = 0; procIndex < params.nproc; procIndex++) {
         pthread_create(&threads[procIndex], &threadAttr[procIndex], (void* (*)(void*)) ThreadedBWE, &threadInfo[procIndex]);
       }
-      for (int procIndex = 0; procIndex < nproc ; procIndex++) {
+      for (int procIndex = 0; procIndex < params.nproc ; procIndex++) {
         pthread_join(threads[procIndex], NULL);
       }
       px = pModel;
@@ -2365,7 +2365,7 @@ int hmcnc(int argc, const char* argv[]) {
       priorCovCov.resize(covCovTransP.size());
       int nSites=covBins[0].size();
       BaumWelchM(startP, covCovTransP, emisP, binoP,
-        model,
+        params.model,
         stateTotCov, stateNCov,
         expCovCovTransP, expEmisP,
         priorCovCov,
@@ -2379,8 +2379,8 @@ int hmcnc(int argc, const char* argv[]) {
     // Eventually this needs to update for some multi-chrom code.
     //
 
-    if (paramOutFile != "") {
-      WriteParameterFile(paramOutFile, nStates, mean, var, maxState, maxCov, startP, covCovTransP, emisP);
+    if (params.paramOutFile != "") {
+      WriteParameterFile(params.paramOutFile, nStates, mean, var, maxState, maxCov, startP, covCovTransP, emisP);
     }
   }
 
@@ -2432,14 +2432,14 @@ int hmcnc(int argc, const char* argv[]) {
 
   ostream *outPtr;
   ofstream outFile;
-  if (outFileName != "") {
-    outFile.open(outFileName.c_str());
+  if (params.outFileName != "") {
+    outFile.open(params.outFileName.c_str());
     outPtr = &outFile;
   }
   else {
     outPtr = &cout;
   }
-  WriteVCF(*outPtr, referenceName, sampleName, contigNames, contigLengths, copyIntervals);
+  WriteVCF(*outPtr, params.referenceName, params.sampleName, contigNames, contigLengths, copyIntervals);
 
   return 0;
 }
