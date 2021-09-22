@@ -4,6 +4,7 @@
 #include <cstdlib>
 
 #include <algorithm>
+#include <array>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -45,6 +46,30 @@ const float MISMAP_RATE=0.01;
 const double minNeg=-1*numeric_limits<double>::epsilon();
 int MAX_CN=6;
 double lepsi=-800;
+
+constexpr std::array<int8_t, 256> NucMap{
+  4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 15
+  4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 31
+  4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 47
+  4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 63
+
+//  A   C        G
+  4,0,4,1, 4,4,4,2, 4,4,4,4, 4,4,4,4,  // 79
+//         T
+  4,4,4,4, 3,4,4,4, 4,4,4,4, 4,4,4,4,  // 95
+  4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 111
+  4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 127
+
+  4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 143
+  4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 159
+  4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 175
+  4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 191
+
+  4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 207
+  4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 223
+  4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 239
+  4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 255
+};
 
 struct BamHeaderDeleter {
   void operator()(bam_hdr_t* hdr) const noexcept {
@@ -1438,7 +1463,6 @@ void ParseChrom(ThreadInfo *threadInfo) {
   }
 }
 
-vector<int> NucMap;
 int GetRefAndAlt(char refNuc, const vector<int> &counts, int &ref, int &alt) {
   vector<int> sCounts=counts;
   sort(sCounts.begin(), sCounts.end());
@@ -2022,19 +2046,15 @@ struct Parameters {
 
 int hmcnc(int argc, const char* argv[]) {
 
-  double scale=2;
-
-  NucMap.resize(256,4);
-  NucMap[(int)'A']=0;
-  NucMap[(int)'C']=1;
-  NucMap[(int)'G']=2;
-  NucMap[(int)'T']=3;
-
-  int maxState=10;
-  int averageReadLength=0;
-
+  //
+  // Initialize parameters from command line
+  //
   Parameters params;
   CLI11_PARSE(params.CLI, argc, argv);
+
+  double scale=2;
+  int maxState=10;
+  int averageReadLength=0;
 
   const string faiFileName{params.referenceName + ".fai"};
   vector<string> contigNames, allContigNames;
