@@ -323,6 +323,7 @@ void WriteSNVs(const string &snvFileName,
                const vector<vector<SNV>> &snvs) {
   ofstream snvOut{snvFileName.c_str()};
   for (size_t c=0; c < contigNames.size(); c++) {
+    assert(c < snvs.size());
     for (size_t i=0; i < snvs[c].size(); i++) {
       snvOut << contigNames[c] << '\t'
              << snvs[c][i].pos << '\t'
@@ -364,6 +365,7 @@ void WriteCovBed(const string &covFileName,
 		             const vector<vector<int>> &covBins) {
   ofstream covFile{covFileName.c_str()};
   for (size_t c=0; c < contigNames.size(); c++) {
+    assert(c < covBins.size());
     for (size_t i=0; i < covBins[c].size(); i++) {
       covFile << contigNames[c] << '\t'
               << i*100 << '\t'
@@ -388,6 +390,7 @@ static void printModel(const vector<vector<double>> &transP, ostream *strm)
 
 static void printEmissions(const vector<vector<double> > &emisP, ostream *strm) {
   *strm << "\nEMIS: \n";
+  assert(!emisP.empty());
   for (size_t i=0; i < emisP[0].size(); i++) {
     *strm << std::setw(7) << i;
   }
@@ -546,8 +549,10 @@ static void correctModel(vector<vector<double>> &transP,
                          int nStates)
 {
   double sum;
+  assert(nStates < transP.size());
   for (int i=0;i<nStates;i++) {
     sum = 0;
+    assert(nStates < transP[i].size());
     for (int j=0;j<nStates;j++) {
       sum+= std::exp(transP[i][j]);
     }
@@ -624,7 +629,6 @@ double ForwardBackwards(const vector<double> &startP,
                         const vector<int> &obs,
                         vector<vector<double>> &f,
                         vector<vector<double>> &b) {
-
   const int totObs    = static_cast<int>(obs.size());
   const int nCovObs   = static_cast<int>(obs.size());
   const int nCovStates = static_cast<int>(startP.size());
@@ -897,6 +901,7 @@ void WriteVCF(ostream &out,
       << "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" << sampleName
       << '\n';
   for (size_t c = 0; c < contigNames.size(); c++) {
+    assert(c < intervals.size());
     for (size_t i = 0; i < intervals[c].size(); i++) {
       if (intervals[c][i].copyNumber != 2) {
 
@@ -920,6 +925,7 @@ void UpdateEmisP(vector<vector<double>> &emisP,
                  vector<vector<double>> &expEmisP,
                  int model) {
   const int nCovStates=emisP.size();
+  assert(nCovStates < expEmisP.size());
   for (int i=1;i<nCovStates;i++) {
     double mean, var;
     Moments(expEmisP[i], mean, var);
@@ -968,6 +974,7 @@ void BaumWelchM(const vector<double> &startP,
   for (int j=0; j < nStates; j++) {
     double colSum=0;
     updateTransP[j].resize(nStates);
+    assert(nStates < expTransP[j].size());
     for (int k=0; k< nStates; k++) {
       colSum +=expTransP[j][k]; //PairSumOfLogP(colSum, expTransP[j][k]);
     }
@@ -986,6 +993,8 @@ void BaumWelchM(const vector<double> &startP,
   updateEmisP.resize(nStates);
 
   vector<double> stateMean(nStates);
+  assert(nStates < stateNCov.size());
+  assert(nStates < stateTotCov.size());
   for (int i=0; i < nStates; i++) {
     if (stateNCov[i] > 0) {
       stateMean[i]=stateTotCov[i]/stateNCov[i];
@@ -994,6 +1003,7 @@ void BaumWelchM(const vector<double> &startP,
       stateMean[i] = 0;
     }
   }
+  assert(!emisP.empty());
   const int maxCov=static_cast<int>(emisP[0].size());
   UpdateEmisP(updateEmisP, expEmisP, model);
 }
@@ -1132,18 +1142,26 @@ int StoreSNVs(char *contigSeq, int contigLength, float mean,
               vector<int> &nG, vector<int> &nT,
               vector<int> &nDel, vector<SNV> &snvs) {
 
-  vector<int*> fPtr(5);
   //
   // Easier for typing
   //
-
   const char *nucs="ACGTd";
+
+  assert(contigLength >= 0);
+  assert(nA.size() <= contigLength);
+  assert(nC.size() <= contigLength);
+  assert(nG.size() <= contigLength);
+  assert(nT.size() <= contigLength);
+  assert(nDel.size() <= contigLength);
+
+  vector<int*> fPtr(5);
   fPtr[0] = &nA[0];
   fPtr[1] = &nC[0];
   fPtr[2] = &nG[0];
   fPtr[3] = &nT[0];
   fPtr[4] = &nDel[0];
-  vector<CountNuc > counts;
+
+  vector<CountNuc> counts;
   counts.resize(5);
   long total=0;
   if (mean==0) {
@@ -1467,6 +1485,8 @@ int GetRefAndAlt(char refNuc, const vector<int> &counts, int &ref, int &alt) {
   vector<int> sCounts=counts;
   sort(sCounts.begin(), sCounts.end());
 
+  assert(sCounts.size() >= 4);
+
   const int second = sCounts[2];
   const int first  = sCounts[3];
   int firstIndex=-1, secondIndex=-1;
@@ -1517,6 +1537,7 @@ int EstimateCoverage(const string &bamFileName,
   size_t useChromIndex=0;
   if (useChrom == "") {
     int maxLen=0;
+    assert(lengths.size() <= allCovBins.size());
     for (size_t i=0; i < lengths.size(); i++) {
       long totCov=0;
       for (size_t j=0; j < static_cast<int>(allCovBins[i].size()); j++ ) {
@@ -1531,6 +1552,7 @@ int EstimateCoverage(const string &bamFileName,
   }
   cerr << "Estimating coverage from " << useChrom << '\n';
   int contigLength=0;
+  assert(chroms.size() <= lengths.size());
   for (size_t i=0; i < chroms.size(); i++) {
     if (chroms[i] == useChrom) {
       contigLength=lengths[i];
@@ -1551,6 +1573,8 @@ int EstimateCoverage(const string &bamFileName,
       exit(1);
     }
     long totCov=0;
+    assert(useChromIndex <= allCovBins.size());
+    assert(lastBin <= allCovBins[useChromIndex].size());
     for (size_t binIndex=0; binIndex<lastBin; binIndex++) {
       totCov+=allCovBins[useChromIndex][binIndex];
     }
@@ -1630,6 +1654,11 @@ int EstimateCoverage(const string &bamFileName,
       //
       // Compute coverage for bins
       const int lastBin=(curEndPos-30000)/100;
+      assert((lastBin+1)*100 < nA.size());
+      assert((lastBin+1)*100 < nC.size());
+      assert((lastBin+1)*100 < nG.size());
+      assert((lastBin+1)*100 < nT.size());
+      assert((lastBin+1)*100 < nDel.size());
       for (int binIndex=curCovBin; binIndex < lastBin; binIndex++) {
         int binTot=0;
         for (int nuc=binIndex*100; nuc < (binIndex+1)*100; nuc++) {
@@ -1648,6 +1677,7 @@ int EstimateCoverage(const string &bamFileName,
       // First pass gets close to CN=2
       //
 
+      assert(lastBin < covBins.size());
       for (int binIndex=0; binIndex<lastBin; binIndex++) {
         totCov+=covBins[binIndex];
       }
@@ -1700,6 +1730,8 @@ void WriteParameterFile(const string &fileName,
     }
     outFile << '\n';
   }
+
+  assert(!transP.empty());
   outFile << "transP\t" << transP.size() << '\t' << transP[0].size() << '\n';
   for (size_t i=0; i < transP.size(); i++) {
     for (size_t j=0; j < transP[j].size(); j++) {
@@ -1710,6 +1742,8 @@ void WriteParameterFile(const string &fileName,
     }
     outFile << '\n';
   }
+
+  assert(!emisP.empty());
   outFile << "emisP\t" << emisP.size() << '\t' << emisP[0].size() << '\n';
   for (size_t i=0; i < emisP.size(); i++) {
     for (size_t j=0; j < emisP[j].size(); j++) {
@@ -2284,6 +2318,7 @@ int hmcnc(int argc, const char* argv[]) {
   //
   // Filter SNVs that are too close
   //
+  assert(snvs.size() <= contigNames.size());
   for (size_t c=0 ;c < contigNames.size(); c++) {
     vector<bool> tooClose(snvs[c].size(), false);
     for (size_t i=1; i < snvs[c].size(); i++ ) {
@@ -2341,6 +2376,7 @@ int hmcnc(int argc, const char* argv[]) {
     //
 
     double prevPX=0;
+    assert(!emisP.empty());
     vector<vector<double> > prevTransP, prevEmisP;
     for (int i=0; i < 4; i++) {
       prevTransP=covCovTransP;
@@ -2407,6 +2443,8 @@ int hmcnc(int argc, const char* argv[]) {
   //
   // Now filter cn=1 and cn=3 intervals, or short calls
   //
+  assert(copyIntervals.size() <= contigNames.size());
+  assert(snvs.size() <= contigNames.size());
   for (size_t c=0; c < contigNames.size(); c++) {
     int snvStart=0;
     for (size_t i=0; i < copyIntervals[c].size(); i++) {
@@ -2421,6 +2459,7 @@ int hmcnc(int argc, const char* argv[]) {
         }
 
         double pCN=0, pCN2=0;
+        assert(snvEnd <= snvs[c].size());
         for (int cni=snvStart; cni < snvEnd; cni++ ) {
           int ref, alt;
           ref=snvs[c][cni].ref;
