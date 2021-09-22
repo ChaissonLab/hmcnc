@@ -2278,15 +2278,12 @@ int hmcnc(int argc, const char* argv[]) {
         pthread_attr_init(&threadAttr[procIndex]);
         pthread_create(&threads[procIndex], &threadAttr[procIndex], (void* (*)(void*)) ParseChrom, &threadInfo[procIndex]);
       }
-
       for (int procIndex = 0; procIndex < parseChromNProc ; procIndex++) {
         pthread_join(threads[procIndex], NULL);
       }
-
       for (int procIndex = 0; procIndex < parseChromNProc ; procIndex++) {
         pthread_attr_destroy(&threadAttr[procIndex]);
       }
-
     }
     else {
       ParseChrom(&threadInfo[0]);
@@ -2408,10 +2405,14 @@ int hmcnc(int argc, const char* argv[]) {
       int totalObs=0;
       curSeq=0;
       for (int procIndex = 0; procIndex < params.nproc; procIndex++) {
+        pthread_attr_init(&threadAttr[procIndex]);
         pthread_create(&threads[procIndex], &threadAttr[procIndex], (void* (*)(void*)) ThreadedBWE, &threadInfo[procIndex]);
       }
       for (int procIndex = 0; procIndex < params.nproc ; procIndex++) {
         pthread_join(threads[procIndex], NULL);
+      }
+      for (int procIndex = 0; procIndex < params.nproc ; procIndex++) {
+        pthread_attr_destroy(&threadAttr[procIndex]);
       }
       px = pModel;
 
