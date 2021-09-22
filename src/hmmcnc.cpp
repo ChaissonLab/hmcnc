@@ -2181,11 +2181,13 @@ int hmcnc(int argc, const char* argv[]) {
 
   params.nproc = min(params.nproc, static_cast<int>(contigNames.size()));
 
-  pthread_t *threads = new pthread_t[params.nproc];
-  vector<ThreadInfo> threadInfo(params.nproc);
+  std::vector<pthread_t> threads(params.nproc);
+  std::vector<pthread_attr_t> threadAttr(params.nproc);
+  std::vector<ThreadInfo> threadInfo(params.nproc);
+
   pthread_mutex_t semaphore;
   pthread_mutex_init(&semaphore, NULL);
-  pthread_attr_t *threadAttr = new pthread_attr_t[params.nproc];
+
   int curSeq=0;
   vector<vector<Interval>> copyIntervals;
   copyIntervals.resize(contigNames.size());
@@ -2194,7 +2196,6 @@ int hmcnc(int argc, const char* argv[]) {
   double pModel=0;
 
   for (int procIndex = 0; procIndex < params.nproc ; procIndex++) {
-    pthread_attr_init(&threadAttr[procIndex]);
     if (params.bamFileName != "") {
       threadInfo[procIndex].htsfp.reset(hts_open(params.bamFileName.c_str(),"r"));
     }
@@ -2281,6 +2282,11 @@ int hmcnc(int argc, const char* argv[]) {
       for (int procIndex = 0; procIndex < parseChromNProc ; procIndex++) {
         pthread_join(threads[procIndex], NULL);
       }
+
+      for (int procIndex = 0; procIndex < parseChromNProc ; procIndex++) {
+        pthread_attr_destroy(&threadAttr[procIndex]);
+      }
+
     }
     else {
       ParseChrom(&threadInfo[0]);
