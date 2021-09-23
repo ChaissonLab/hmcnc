@@ -14,7 +14,11 @@
 
 ### install
 - clone the repo
-- cd hmcnc ; mkdir build ; cd build ; meson .. ; ninja
+- build the repo with meson and ninja
+
+```
+cd hmcnc ; mkdir build ; cd build ; meson .. ; ninja
+```
 
 ### usage
 ```
