@@ -11,6 +11,7 @@
 - gcc
 - meson
 - ninja
+- boost
 
 ### install
 - clone the repo
