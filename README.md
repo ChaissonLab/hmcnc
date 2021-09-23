@@ -55,3 +55,8 @@ Output:
   -L FILE                         ** Need description for clipOutFileName **
   -S FILE                     Write SNVs to this file.
 ```
+### example
+
+```
+hmcnc human_GRCh38_no_alt_analysis_set.fasta -a HG002.GRCh38.deepvariant.haplotagged.bam -t 20 -o out.vcf
+```
