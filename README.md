@@ -12,6 +12,8 @@
 - meson
 - ninja
 - boost
+- htslib
+- zlib
 
 ### install
 - clone the repo
