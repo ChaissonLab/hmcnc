@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "CLI11.hpp"
+
 // ----------------------
 // data structs/enums
 // ----------------------
@@ -34,6 +36,36 @@ struct SNV {
   SNV(int p);
 
   bool operator<(const SNV &rhs) const;
+};
+
+struct Parameters {
+
+  // positional arg
+  std::string referenceName;
+
+  // options
+  std::string bamFileName;
+  std::string snvInFileName;
+  std::string snvOutFileName;
+  std::string paramInFile;
+  std::string paramOutFile;
+  std::string covBedInFileName;
+  std::string covBedOutFileName;
+  std::string clipInFileName;
+  std::string clipOutFileName;
+  std::string outFileName;
+  std::string useChrom;
+  std::string hmmChrom;
+
+  int nproc = 4;
+  MODEL_TYPE model = NEG_BINOM;
+  bool mergeBins=false;
+  std::string sampleName;
+
+  CLI::App CLI;
+  std::string modelString;
+
+  Parameters();
 };
 
 // ----------------------
@@ -117,9 +149,14 @@ double max_over_rows(const std::vector<std::vector<double>> &v, size_t col,
                      const std::vector<std::vector<double>> &v2, size_t nextState,
                      size_t nStates);
 
-// -------------------------
-// main application runner
-// -------------------------
+// --------------------------
+// main application runners
+// --------------------------
+
+// inject parameters for testing
+int hmcnc(Parameters& params);
+
+// initialize parameters from command line
 int hmcnc(int argc, const char* argv[]);
 
 int hmcnc_test();

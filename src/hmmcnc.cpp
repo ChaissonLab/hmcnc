@@ -25,7 +25,6 @@
 #include <boost/math/distributions/negative_binomial.hpp>
 #include <boost/math/distributions/binomial.hpp>
 
-#include "../include/CLI11.hpp"
 #include "../include/hmcnc.h"
 
 using boost::math::binomial;
@@ -1927,163 +1926,135 @@ void InitParams(vector<vector<double>> &covCovTransP,
   }
 }
 
-struct Parameters {
+// ------------
+// Parameters
+// ------------
 
-  // positional arg
-  std::string referenceName;
-
-  // options
-  std::string bamFileName;
-  std::string snvInFileName;
-  std::string snvOutFileName;
-  std::string paramInFile;
-  std::string paramOutFile;
-  std::string covBedInFileName;
-  std::string covBedOutFileName;
-  std::string clipInFileName;
-  std::string clipOutFileName;
-  std::string outFileName;
-  std::string useChrom;
-  std::string hmmChrom;
-
-  int nproc = 4;
-  MODEL_TYPE model = NEG_BINOM;
-  bool mergeBins=false;
-  std::string sampleName;
-
-  CLI::App CLI;
-  std::string modelString;
-
-  Parameters()
-    : sampleName{"sample"}
-    , CLI{"Hidden Markov Copy Number Caller\n"}
-  {
-    //
-    // Positional args
-    //
-    CLI.add_option("reference", referenceName,
-      "Read reference from this FASTA file.")->
-      type_name("FILE")->
-      required();
-
-    //
-    // Input options
-    //
-    const std::string inputGroupName{"Input"};
-    CLI.add_option("-a", bamFileName,
-      "Read alignments from this BAM file and calculate depth on the fly.")->
-      group(inputGroupName)->
-      type_name("FILE");
-
-    CLI.add_option("-b", covBedInFileName,
-      "Read depth bed from this file (skip calculation of depth).")->
-      group(inputGroupName)->
-      type_name("FILE");
-
-    CLI.add_option("-s", snvInFileName,
-      "Read SNVs from this file (when not estimating from a BAM).")->
-      group(inputGroupName)->
-      type_name("FILE");
-
-    CLI.add_option("-p", paramInFile,
-      "Read parameter file (do not train with Baum-Welch).")->
-      group(inputGroupName)->
-      type_name("FILE");
-
-    CLI.add_option("-l", clipInFileName,
-      "    ** Need description for clipInFileName ** ")->
-      group(inputGroupName)->
-      type_name("FILE");
-
-    //
-    // Depth calculation options
-    //
-    const std::string depthGroupName{"Depth Calculation"};
-    CLI.add_option("-e",lepsi,
-      "Value of log-epsilon. [-800]")->
-      group(depthGroupName);
-
-    CLI.add_option("-m", modelString,
-      "Coverage model to use: Poisson (pois), or negative binomial (nb). [nb]")->
-      group(depthGroupName);
-
-    CLI.add_option("-t", nproc,
-      "Number of threads. [4]")->
-      group(depthGroupName);
-
-    CLI.add_option("-c", useChrom,
-      "Use this contig to estimate coverage. By default, longest contig.")->
-      group(depthGroupName);
-
-    //
-    // Output options
-    //
-    const std::string outputGroupName{"Output"};
-    CLI.add_option("-o", outFileName,
-      "Output vcf to this file. Write to stdout if not provided.")->
-      group(outputGroupName)->
-      type_name("FILE");
-
-    CLI.add_option("--sample", sampleName,
-      "Sample name in the vcf ['sample']")->
-      group(outputGroupName)->
-      ignore_case();
-
-    CLI.add_option("-M", mergeBins,
-      "Merge consecutive bins with the same copy number.")->
-      group(outputGroupName)->
-      type_name("");
-
-    CLI.add_option("-C", hmmChrom,
-      "Only run hmm on this chrom.")->
-      group(outputGroupName);
-
-    CLI.add_option("-B", covBedOutFileName,
-      "Write coverage bed to this file.")->
-      group(outputGroupName)->
-      type_name("FILE");
-
-    CLI.add_option("-P", paramOutFile,
-      "Write trained parameter file.")->
-      group(outputGroupName)->
-      type_name("FILE");
-
-    CLI.add_option("-L", clipOutFileName,
-      "    ** Need description for clipOutFileName **  ")->
-      group(outputGroupName)->
-      type_name("FILE");
-
-    CLI.add_option("-S", snvOutFileName,
-      "Write SNVs to this file.")->
-      group(outputGroupName)->
-      type_name("FILE");
-
-    //
-    // Post-parsing sanity checks
-    //
-    CLI.callback([this]() {
-      if (this->modelString == "pois") {
-        this->model = POIS;
-      }
-      if (this->covBedInFileName != "" and this->covBedOutFileName != "") {
-        cerr << "ERROR. Cannot specify -b and -B.\n";
-        exit(1);
-      }
-      if (this->covBedInFileName == "" and this->bamFileName == "") {
-        cerr << "ERROR. Must specify either a coverage file or a bam file\n";
-        exit(1);
-      }
-    });
-  }
-};
-
-int hmcnc(int argc, const char* argv[]) {
+Parameters::Parameters()
+  : sampleName{"sample"}
+  , CLI{"Hidden Markov Copy Number Caller\n"}
+{
+  //
+  // Positional args
+  //
+  CLI.add_option("reference", referenceName,
+    "Read reference from this FASTA file.")->
+    type_name("FILE")->
+    required();
 
   //
-  // Initialize parameters from command line
+  // Input options
   //
-  Parameters params;
-  CLI11_PARSE(params.CLI, argc, argv);
+  const std::string inputGroupName{"Input"};
+  CLI.add_option("-a", bamFileName,
+    "Read alignments from this BAM file and calculate depth on the fly.")->
+    group(inputGroupName)->
+    type_name("FILE");
+
+  CLI.add_option("-b", covBedInFileName,
+    "Read depth bed from this file (skip calculation of depth).")->
+    group(inputGroupName)->
+    type_name("FILE");
+
+  CLI.add_option("-s", snvInFileName,
+    "Read SNVs from this file (when not estimating from a BAM).")->
+    group(inputGroupName)->
+    type_name("FILE");
+
+  CLI.add_option("-p", paramInFile,
+    "Read parameter file (do not train with Baum-Welch).")->
+    group(inputGroupName)->
+    type_name("FILE");
+
+  CLI.add_option("-l", clipInFileName,
+    "    ** Need description for clipInFileName ** ")->
+    group(inputGroupName)->
+    type_name("FILE");
+
+  //
+  // Depth calculation options
+  //
+  const std::string depthGroupName{"Depth Calculation"};
+  CLI.add_option("-e",lepsi,
+    "Value of log-epsilon. [-800]")->
+    group(depthGroupName);
+
+  CLI.add_option("-m", modelString,
+    "Coverage model to use: Poisson (pois), or negative binomial (nb). [nb]")->
+    group(depthGroupName);
+
+  CLI.add_option("-t", nproc,
+    "Number of threads. [4]")->
+    group(depthGroupName);
+
+  CLI.add_option("-c", useChrom,
+    "Use this contig to estimate coverage. By default, longest contig.")->
+    group(depthGroupName);
+
+  //
+  // Output options
+  //
+  const std::string outputGroupName{"Output"};
+  CLI.add_option("-o", outFileName,
+    "Output vcf to this file. Write to stdout if not provided.")->
+    group(outputGroupName)->
+    type_name("FILE");
+
+  CLI.add_option("--sample", sampleName,
+    "Sample name in the vcf ['sample']")->
+    group(outputGroupName)->
+    ignore_case();
+
+  CLI.add_option("-M", mergeBins,
+    "Merge consecutive bins with the same copy number.")->
+    group(outputGroupName)->
+    type_name("");
+
+  CLI.add_option("-C", hmmChrom,
+    "Only run hmm on this chrom.")->
+    group(outputGroupName);
+
+  CLI.add_option("-B", covBedOutFileName,
+    "Write coverage bed to this file.")->
+    group(outputGroupName)->
+    type_name("FILE");
+
+  CLI.add_option("-P", paramOutFile,
+    "Write trained parameter file.")->
+    group(outputGroupName)->
+    type_name("FILE");
+
+  CLI.add_option("-L", clipOutFileName,
+    "    ** Need description for clipOutFileName **  ")->
+    group(outputGroupName)->
+    type_name("FILE");
+
+  CLI.add_option("-S", snvOutFileName,
+    "Write SNVs to this file.")->
+    group(outputGroupName)->
+    type_name("FILE");
+
+  //
+  // Post-parsing sanity checks
+  //
+  CLI.callback([this]() {
+    if (this->modelString == "pois") {
+      this->model = POIS;
+    }
+    if (this->covBedInFileName != "" and this->covBedOutFileName != "") {
+      cerr << "ERROR. Cannot specify -b and -B.\n";
+      exit(1);
+    }
+    if (this->covBedInFileName == "" and this->bamFileName == "") {
+      cerr << "ERROR. Must specify either a coverage file or a bam file\n";
+      exit(1);
+    }
+  });
+}
+
+// ------------
+
+int hmcnc(Parameters& params) {
 
   double scale=2;
   int maxState=10;
@@ -2507,6 +2478,16 @@ int hmcnc(int argc, const char* argv[]) {
   WriteVCF(*outPtr, params.referenceName, params.sampleName, contigNames, contigLengths, copyIntervals);
 
   return 0;
+}
+
+int hmcnc(int argc, const char* argv[]) {
+
+  //
+  // Initialize parameters from command line
+  //
+  Parameters params;
+  CLI11_PARSE(params.CLI, argc, argv);
+  return hmcnc(params);
 }
 
 int hmcnc_test() { return 42; }
