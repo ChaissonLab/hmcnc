@@ -15,12 +15,14 @@ jobs:
       with:
         python-version: '3.x'
     - uses: MarkusJx/install-boost@v2.0.0
+      id: install-boost
       with:
         boost_version: 1.73.0
     - run: pip install meson ninja
     - run: meson setup builddir/
       env:
         CC: gcc
+        BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
     - run: meson test -C builddir/ -v
 
   macos:
@@ -31,6 +33,7 @@ jobs:
       with:
         python-version: '3.x'
     - uses: MarkusJx/install-boost@v2.0.0
+      id: install-boost
       with:
         boost_version: 1.73.0
     - run: brew install gcc
@@ -38,4 +41,5 @@ jobs:
     - run: meson setup builddir/
       env:
         CC: gcc
+        BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
     - run: meson test -C builddir/ -v
