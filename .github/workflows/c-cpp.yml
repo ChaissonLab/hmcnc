@@ -1,0 +1,23 @@
+name: Github CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@master
+    - name: Setup
+      run: |
+        mkdir build
+        cd build
+    - name: Build & Test
+      run: |
+        meson ..
+        ninja test
