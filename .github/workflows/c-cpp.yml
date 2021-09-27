@@ -14,6 +14,11 @@ jobs:
     - uses: actions/setup-python@v1
       with:
         python-version: '3.x'
+    - name: Install boost
+        uses: MarkusJx/install-boost@v2.0.0
+        id: install-boost
+        with:
+          boost_version: 1.73.0
     - run: pip install meson ninja
     - run: meson setup builddir/
       env:
@@ -27,6 +32,11 @@ jobs:
     - uses: actions/setup-python@v1
       with:
         python-version: '3.x'
+    - name: Install boost
+        uses: MarkusJx/install-boost@v2.0.0
+        id: install-boost
+        with:
+          boost_version: 1.73.0
     - run: brew install gcc
     - run: pip install meson ninja
     - run: meson setup builddir/
