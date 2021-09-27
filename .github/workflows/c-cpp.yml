@@ -7,17 +7,29 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
-
+  linux:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@master
-    - name: Setup
-      run: |
-        mkdir build
-        cd build
-    - name: Build & Test
-      run: |
-        meson ..
-        ninja test
+    - uses: actions/setup-python@v1
+      with:
+        python-version '3.x'
+    - run: pip install meson ninja
+    - run: meson setup builddir/
+      env:
+        CC: gcc
+    - run: meson test -C builddir/ -v
+
+  macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@master
+    - uses: actions/setup-python@v1
+      with:
+        python-version: '3.x'
+    - run: brew install gcc
+    - run: pip install meson ninja
+    - run: meson setup builddir/
+      env:
+        CC: gcc
+    - run: meson test -C builddir/ -v
