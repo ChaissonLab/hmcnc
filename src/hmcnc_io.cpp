@@ -55,26 +55,22 @@ void ReadCoverage(const std::string &covFileName,
 
 void ReadFai(std::istream &faiIn,
              std::vector<std::string> &contigNames,
-             std::vector<int> &contigLengths)
-{
-  if (faiIn.good() == false) {
-    std::cerr << "ERROR. Reference is not indexed, or could not open .fai file" << '\n';
-    exit(EXIT_FAILURE);
-  }
+             std::vector<int> &contigLengths) {
+  contigNames.clear();
+  contigLengths.clear();
 
-  while (faiIn) {
-    std::string line;
-    getline(faiIn, line);
-    std::stringstream strm(line);
-    if (line != "") {
-      std::string contig;
-      int length;
-
-      strm >> contig;
-      strm >> length;
-      contigNames.push_back(contig);
-      contigLengths.push_back(length);
+  std::string line;
+  std::vector<std::string> fields;
+  while (std::getline(faiIn, line)) {
+    fields.clear();
+    boost::split(fields, line, boost::is_any_of("\t "));
+    if (fields.size() < 2) {
+      std::cerr << "ERROR. Invalid FAI input: '" << line << "'\n";
+      exit(EXIT_FAILURE);
     }
+
+    contigNames.push_back(fields[0]);
+    contigLengths.push_back(std::stoi(fields[1]));
   }
 }
 
@@ -82,6 +78,10 @@ void ReadFai(const std::string faiFileName,
              std::vector<std::string> &contigNames,
              std::vector<int> &contigLengths)   {
   std::ifstream faiIn{faiFileName.c_str()};
+  if (faiIn.good() == false) {
+    std::cerr << "ERROR. Reference is not indexed, or could not open fai file: '" << faiFileName << "'\n";
+    exit(EXIT_FAILURE);
+  }
   ReadFai(faiIn, contigNames, contigLengths);
 }
 
