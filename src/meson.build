@@ -6,6 +6,8 @@ hmcnc_cpp_sources = files([
  executable(
      'hmcnc',
      files([
+        'hmcnc_defs.cpp',
+        'hmcnc_io.cpp',
         'hmmcnc.cpp',
         'main.cpp'
          ]),

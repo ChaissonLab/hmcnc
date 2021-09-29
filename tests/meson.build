@@ -1,6 +1,8 @@
 hmcnc_tests_cpp = files([
   'test_hmcnc.cpp',
-  '../src/hmmcnc.cpp'
+  '../src/hmmcnc.cpp',
+  '../src/hmcnc_defs.cpp',
+  '../src/hmcnc_io.cpp',
 ])
 
 hmcnc_gtest_dep = dependency(
