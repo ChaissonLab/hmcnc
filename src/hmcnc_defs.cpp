@@ -1,5 +1,6 @@
 #include "../include/hmcnc_defs.h"
 
+#include <cassert>
 #include <cstdlib>
 
 #include <iostream>
