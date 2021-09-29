@@ -923,7 +923,7 @@ void UpdateEmisP(vector<vector<double>> &emisP,
                  vector<vector<double>> &expEmisP,
                  int model) {
   const int nCovStates=emisP.size();
-  assert(nCovStates < expEmisP.size());
+  assert(nCovStates <= expEmisP.size());
   for (int i=1;i<nCovStates;i++) {
     double mean, var;
     Moments(expEmisP[i], mean, var);
@@ -972,7 +972,7 @@ void BaumWelchM(const vector<double> &startP,
   for (int j=0; j < nStates; j++) {
     double colSum=0;
     updateTransP[j].resize(nStates);
-    assert(nStates < expTransP[j].size());
+    assert(nStates <= expTransP[j].size()); 
     for (int k=0; k< nStates; k++) {
       colSum +=expTransP[j][k]; //PairSumOfLogP(colSum, expTransP[j][k]);
     }
@@ -991,8 +991,8 @@ void BaumWelchM(const vector<double> &startP,
   updateEmisP.resize(nStates);
 
   vector<double> stateMean(nStates);
-  assert(nStates < stateNCov.size());
-  assert(nStates < stateTotCov.size());
+  assert(nStates <= stateNCov.size());
+  assert(nStates <= stateTotCov.size());
   for (int i=0; i < nStates; i++) {
     if (stateNCov[i] > 0) {
       stateMean[i]=stateTotCov[i]/stateNCov[i];
@@ -1652,11 +1652,11 @@ int EstimateCoverage(const string &bamFileName,
       //
       // Compute coverage for bins
       const int lastBin=(curEndPos-30000)/100;
-      assert((lastBin+1)*100 < nA.size());
-      assert((lastBin+1)*100 < nC.size());
-      assert((lastBin+1)*100 < nG.size());
-      assert((lastBin+1)*100 < nT.size());
-      assert((lastBin+1)*100 < nDel.size());
+      assert((lastBin+1)*100 <= nA.size());
+      assert((lastBin+1)*100 <= nC.size());
+      assert((lastBin+1)*100 <= nG.size());
+      assert((lastBin+1)*100 <= nT.size());
+      assert((lastBin+1)*100 <= nDel.size());
       for (int binIndex=curCovBin; binIndex < lastBin; binIndex++) {
         int binTot=0;
         for (int nuc=binIndex*100; nuc < (binIndex+1)*100; nuc++) {
@@ -1675,7 +1675,7 @@ int EstimateCoverage(const string &bamFileName,
       // First pass gets close to CN=2
       //
 
-      assert(lastBin < covBins.size());
+      assert(lastBin <= covBins.size());
       for (int binIndex=0; binIndex<lastBin; binIndex++) {
         totCov+=covBins[binIndex];
       }
