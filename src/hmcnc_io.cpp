@@ -5,67 +5,42 @@
 
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <sstream>
 
-//
-// Not super
+#include <boost/algorithm/string.hpp>
+
 void ReadCoverage(std::istream &covFile,
                   const std::vector<std::string> &contigNames,
                   std::vector<std::vector<int>> &covBins) {
-  std::string chrom, curChrom;
-  int start, end;
-  int cov;
-  int last=0;
-  int length;
+  std::map<std::string, std::vector<int>> tempCovBins;
 
-  covFile.seekg(0, std::ios::end);           // go to the end
-  length = covFile.tellg();                  // report location (this is the length)
-  covFile.seekg(0, std::ios::beg);           // go back to the beginning
-  std::vector<char> buffer(length, '\0');    // allocate memory for a buffer of appropriate dimension
-  covFile.read(buffer.data(), length);       // read the whole file into the buffer
+  int length = 0;
+  std::string line;
+  std::vector<std::string> fields;
+  while (std::getline(covFile, line)) {
+    fields.clear();
+    boost::split(fields, line, boost::is_any_of("\t "));
+    if (fields.size() < 4) {
+      std::cerr << "ERROR. Invalid BED input: '" << line << "'\n";
+      exit(EXIT_FAILURE);
+    }
+
+    const std::string &contig = fields.at(0);
+    const int cov = std::stoi(fields.at(3));
+    tempCovBins[contig].push_back(cov);
+    length += line.size();
+  }
+
   std::cerr << "read cov buffer of len " << length << '\n';
 
-  int i=0;
-  std::string contigName("");
-  int curContig=0;
-  if (length > 0) {
-    covBins.push_back(std::vector<int>() );
-  }
-  while (i < length) {
-    while (i < length and std::isspace(buffer[i])) {
-      i++;
-    }
-    int c=i;
-    while (i < length and std::isspace(buffer[i]) == false) {
-      i++;
-    }
-    if (i < length) {
-      if (i-c > static_cast<int>(contigName.size())) {
-        contigName.resize(i-c);
-      }
-      contigName = std::string(&buffer[c], i-c);
-      ++i;
-      start=std::atoi(&buffer[i]);
-      while(i < length and buffer[i] != '\t') {
-        i++;
-      }
-      i++;
-      end=std::atoi(&buffer[i]);
-      while(i < length and buffer[i] != '\t') {
-        i++;
-      }
-      cov=std::atoi(&buffer[i]);
-      i++;
-      //      sscanf(&buffer[i], "%d	%d	%d", &start, &end, &cov);
-      if (contigName != contigNames[curContig]) {
-        covBins.push_back(std::vector<int>());
-        curContig++;
-        std::cerr << "i " << i << '\t' << curContig << '\n';
-      }
-      covBins[curContig].push_back(cov);
-    }
-    while (i < length and buffer[i] != '\n') {
-      i++;
+  covBins.clear();
+  for (const auto &contig : contigNames) {
+    const auto found = tempCovBins.find(contig);
+    if (found == tempCovBins.cend()) {
+      covBins.push_back(std::vector<int>{});
+    } else {
+      covBins.push_back(std::move(found->second));
     }
   }
 }
@@ -201,11 +176,13 @@ void WriteCovBed(std::ostream &covFile,
 		             const std::vector<std::vector<int>> &covBins) {
   for (size_t c=0; c < contigNames.size(); c++) {
     assert(c < covBins.size());
-    for (size_t i=0; i < covBins[c].size(); i++) {
-      covFile << contigNames[c] << '\t'
+    const auto &contigName = contigNames[c];
+    const auto &contigBins = covBins[c];
+    for (size_t i=0; i < contigBins.size(); i++) {
+      covFile << contigName << '\t'
               << i*100 << '\t'
               << (i+1)*100 << '\t'
-              << covBins[c][i] << '\n';
+              << contigBins[i] << '\n';
     }
   }
 }
