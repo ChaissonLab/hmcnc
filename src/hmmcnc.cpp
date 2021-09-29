@@ -1866,7 +1866,8 @@ int hmcnc(Parameters& params) {
     InitParams(covCovTransP, covSnvTransP, snvSnvTransP,
 	       nStates, nSNVStates, log(1-exp(small)), log(exp(small)/(nStates-1)),
 	       emisP, params.model, maxCov, mean, var, binoP);
-    printModel(covCovTransP, &cerr);
+    PrintModel("TRANS", covCovTransP, std::cerr);
+    PrintModel("EMIS", emisP, std::cerr);
     //    printEmissions(emisP);
 
     //
@@ -1929,7 +1930,8 @@ int hmcnc(Parameters& params) {
         priorCovCov,
         updateTransP, updateEmisP);
 
-      printModel(updateTransP, &cerr);
+      PrintModel("TRANS", updateTransP, std::cerr);
+      PrintModel("EMIS", updateEmisP, std::cerr);
       covCovTransP=updateTransP;
     }
 

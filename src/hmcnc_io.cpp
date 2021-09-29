@@ -279,9 +279,6 @@ void WriteSNVs(const std::string &snvFileName,
   WriteSNVs(snvOut, contigNames, snvs);
 }
 
-
-
-
 void WriteVCF(std::ostream &out,
 	      const std::string &refName,
 	      const std::string &sampleName,
@@ -341,4 +338,18 @@ void WriteVCF(std::ostream &out,
       }
     }
   }
+}
+
+void PrintModel(const std::string &label,
+                const std::vector<std::vector<double>> &model,
+                std::ostream &out) {
+  out << '\n' << label << ": \n";//
+  for (size_t r=0; r<model.size(); r++) {
+    out << r <<":";
+    for (const auto e : model[r]) {
+      out << '\t' << e;
+    }
+    out << '\n';
+  }
+  out << '\n';
 }

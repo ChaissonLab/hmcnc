@@ -51,8 +51,6 @@ void ReadSNVs(const std::string &snvFileName,
               const std::vector<std::string> &contigNames,
               std::vector<std::vector<SNV>> &snvs);
 
-
-
 void WriteCovBed(std::ostream &covFile,
 		             const std::vector<std::string> &contigNames,
 		             const std::vector<std::vector<int>> &covBins);
@@ -92,5 +90,9 @@ void WriteVCF(std::ostream &out,
 	      const std::vector<std::string> &contigNames,
 	      const std::vector<int> &contigLengths,
 	      const std::vector<std::vector<Interval>> &intervals);
+
+void PrintModel(const std::string &label,
+                const std::vector<std::vector<double>> &model,
+                std::ostream &out);
 
 #endif // HMCNC_IO_H
