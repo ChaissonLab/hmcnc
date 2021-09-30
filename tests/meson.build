@@ -1,5 +1,6 @@
 hmcnc_tests_cpp = files([
   'test_hmcnc.cpp',
+  'test_hmcnc_io.cpp',
   '../src/hmmcnc.cpp',
   '../src/hmcnc_io.cpp',
 ])
