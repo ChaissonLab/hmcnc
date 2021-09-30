@@ -817,6 +817,7 @@ double BaumWelchEOnChrom(const vector<double> &startP,
 void AssignNearestClip(vector<vector<int > > &clipBins,
 		       double averageCoverage,
 		       int maxSearch,
+		       vector<string> &contigNames,
 		       vector<vector<Interval> > &intervals) {
   int minClip=averageCoverage/4;
   for (int contig=0; contig < intervals.size(); contig++) {
@@ -825,38 +826,39 @@ void AssignNearestClip(vector<vector<int > > &clipBins,
     for (int i=0; i < intervals[contig].size(); i++) {
       int maxClip=0;
       int maxClipPos=-1;
-
+      int intvStart = intervals[contig][i].start/100;
+      int intvEnd   = intervals[contig][i].end/100;
       // Do a bit of logic to determine when to stop the search
       int searchEnd = min((int)clipBins[contig].size(),
-			  min(max(intervals[contig][i].start, intervals[contig][i].end-maxSearch),
-			      intervals[contig][i].start+maxSearch));
+			  min(max(intvStart, intvEnd -maxSearch),
+			      intvStart+maxSearch));
       
-      for (int clipIndex=max(0, intervals[contig][i].start - maxSearch); clipIndex < searchEnd; clipIndex++) {
-	if (clipBins[contig][clipIndex] > maxClip) {
+      for (int clipIndex=max(0, intvStart - maxSearch); clipIndex < searchEnd; clipIndex++) {
+	if (clipBins[contig][clipIndex] > maxClip and clipBins[contig][clipIndex] > minClip) {
 	  maxClip = clipBins[contig][clipIndex];
 	  maxClipPos=clipIndex;
 	}
       }
       if (maxClipPos != -1) {
-	intervals[contig][i].distanceToFrontClip=abs(maxClipPos - intervals[contig][i].start);
+	intervals[contig][i].distanceToFrontClip=abs(maxClipPos - intvStart);
 	intervals[contig][i].nFrontClip=maxClip;
-	cout << "Found start clip for " << contig << "\t" << i << "\t" << intervals[contig][i].distanceToFrontClip << "\t" << intervals[contig][i].nFrontClip << endl;	
+	cerr << "Found start clip for " << contig << "\t" << i << "\t" << intervals[contig][i].distanceToFrontClip << "\t" << intervals[contig][i].nFrontClip << "\t" << contigNames[contig] << ":" << intervals[contig][i].start << "-" << intervals[contig][i].end  << "\t" << intervals[contig][i].copyNumber << endl;
       }
 
       // Look for clipping at the end of the interval
       maxClip=0;
       maxClipPos=-1;
-      for (int clipIndex =max(searchEnd, intervals[contig][i].end - maxSearch);
-	   clipIndex < min((int) clipBins[contig].size(), intervals[contig][i].end + maxSearch); clipIndex++) {
-	if (clipBins[contig][clipIndex] > maxClip) {
+      for (int clipIndex =max(searchEnd, intvEnd - maxSearch);
+	   clipIndex < min((int) clipBins[contig].size(), intvEnd + maxSearch); clipIndex++) {
+	if (clipBins[contig][clipIndex] > maxClip and clipBins[contig][clipIndex] > minClip) {
 	  maxClip = clipBins[contig][clipIndex];
 	  maxClipPos=clipIndex;
 	}
       }
       if (maxClipPos != -1) {
-	intervals[contig][i].distanceToEndClip=abs(maxClipPos - intervals[contig][i].end);
+	intervals[contig][i].distanceToEndClip=abs(maxClipPos - intvEnd);
 	intervals[contig][i].nEndClip=maxClip;
-	cout << "Found End clip for " << contig << "\t" << i << "\t" << intervals[contig][i].distanceToEndClip << "\t" << intervals[contig][i].nEndClip << endl;	
+	cerr << "Found End clip for " << contig << "\t" << i << "\t" << intervals[contig][i].distanceToEndClip << "\t" << intervals[contig][i].nEndClip << "\t" << contigNames[contig] << ":" << intervals[contig][i].start << "-" << intervals[contig][i].end <<  "\t" << intervals[contig][i].copyNumber << endl; 
       }
     }
   }
@@ -1036,12 +1038,13 @@ void BaumWelchM(const vector<double> &startP,
   updateTransP.resize(nStates);
   vector<double> colSums;
 
-  cerr << "Update trans: " << '\n';
-  cerr << "p\t";
+  /*  cerr << "Update trans: " << '\n';
+    cerr << "p\t";
   for (int j=0; j < nStates; j++) {
     cerr << std::setw(8) << j << '\t';
   }
   cerr << '\n';
+  */
   for (int j=0; j < nStates; j++) {
     double colSum=0;
     updateTransP[j].resize(nStates);
@@ -1053,9 +1056,9 @@ void BaumWelchM(const vector<double> &startP,
     cerr << j;
     for (int k=0; k < nStates; k++) {
       updateTransP[j][k] = log(expTransP[j][k]/colSum); //min(ONE, expTransP[j][k] - colSum);
-      cerr << '\t' << std::setw(8) << updateTransP[j][k];
+      //      cerr << '\t' << std::setw(8) << updateTransP[j][k];
     }
-    cerr << '\n';
+    //    cerr << '\n';
   }
   //
   // M step for emissions -- use summary statistics to recompute emission values
@@ -2505,6 +2508,7 @@ int hmcnc(Parameters& params) {
   AssignNearestClip(clipBins,
 		    mean,
 		    5,
+		    contigNames,
 		    copyIntervals);
   
   for (size_t c=0; c < contigNames.size(); c++) {
@@ -2551,6 +2555,10 @@ int hmcnc(Parameters& params) {
         if (averageReadLength > 0 and copyIntervals[c][i].end-copyIntervals[c][i].start *2 < averageReadLength) {
           copyIntervals[c][i].filter = "FAIL";
         }
+	// Give it a chance to recover with clipping
+	if (copyIntervals[c][i].nFrontClip > 0 or copyIntervals[c][i].nEndClip > 0) {
+	  copyIntervals[c][i].filter = "PASS";
+	}
 	snvStart=snvEnd;
       }
     }
