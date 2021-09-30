@@ -77,3 +77,61 @@ TEST(hmcnc_io, can_read_normal_fai) {
   EXPECT_EQ(contigLengths[0], 1600);
   EXPECT_EQ(contigLengths[1], 400);
 }
+
+std::string ParameterFileText() {
+  return {
+    "nStates\t7\n"
+    "covMean\t38\n"
+    "covVar\t114\n"
+    "maxState\t10\n"
+    "maxCov\t209\n"
+    "startP\n"
+    "-1.94591\n"
+    "-1.94591\n"
+    "-1.94591\n"
+    "-1.94591\n"
+    "-1.94591\n"
+    "-1.94591\n"
+    "-1.94591\n"
+    "transP\t7\t7\n"
+    "-9.35918e-14\t-31.7918\t-31.7918\t-31.7918\t-31.7918\t-31.7918\t-31.7918\n"
+    "-31.7918\t-9.35918e-14\t-31.7918\t-31.7918\t-31.7918\t-31.7918\t-31.7918\n"
+    "-31.7918\t-31.7918\t-9.35918e-14\t-31.7918\t-31.7918\t-31.7918\t-31.7918\n"
+    "-31.7918\t-31.7918\t-31.7918\t-9.35918e-14\t-31.7918\t-31.7918\t-31.7918\n"
+    "-31.7918\t-31.7918\t-31.7918\t-31.7918\t-9.35918e-14\t-31.7918\t-31.7918\n"
+    "-31.7918\t-31.7918\t-31.7918\t-31.7918\t-31.7918\t-9.35918e-14\t-31.7918\n"
+    "-31.7918\t-31.7918\t-31.7918\t-31.7918\t-31.7918\t-31.7918\t-9.35918e-14\n"
+    "emisP\t7\t7\n"
+    "-9.35918e-14\t-31.7918\t-31.7918\t-31.7918\t-31.7918\t-31.7918\t-31.7918\n"
+    "-31.7918\t-9.35918e-14\t-31.7918\t-31.7918\t-31.7918\t-31.7918\t-31.7918\n"
+    "-31.7918\t-31.7918\t-9.35918e-14\t-31.7918\t-31.7918\t-31.7918\t-31.7918\n"
+    "-31.7918\t-31.7918\t-31.7918\t-9.35918e-14\t-31.7918\t-31.7918\t-31.7918\n"
+    "-31.7918\t-31.7918\t-31.7918\t-31.7918\t-9.35918e-14\t-31.7918\t-31.7918\n"
+    "-31.7918\t-31.7918\t-31.7918\t-31.7918\t-31.7918\t-9.35918e-14\t-31.7918\n"
+    "-31.7918\t-31.7918\t-31.7918\t-31.7918\t-31.7918\t-31.7918\t-9.35918e-14\n"
+  };
+}
+
+TEST(hmcnc_io, parameter_file_can_do_roundtrip) {
+
+  const std::string inputText = Normalized(ParameterFileText());
+  std::istringstream paramIn{inputText};
+
+  // data
+  int nStates = 42;
+  double covMean = 42.;
+  double covVar = 42.;
+  int maxState = 42;
+  int maxCov = 42;
+  std::vector<double> startP;
+  std::vector<std::vector<double>> transP;
+  std::vector<std::vector<double>> emisP;
+  ReadParameterFile(paramIn, nStates, covMean, covVar, maxState, maxCov,
+                    startP, transP, emisP);
+
+  std::ostringstream paramOut;
+  WriteParameterFile(paramOut, nStates, covMean, covVar, maxState, maxCov,
+                    startP, transP, emisP);
+
+  EXPECT_EQ(Normalized(paramOut.str()), inputText);
+}
