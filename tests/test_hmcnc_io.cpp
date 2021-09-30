@@ -53,3 +53,27 @@ TEST(hmcnc_io, normal_coverage_bed_can_do_roundtrip) {
   EXPECT_EQ(Normalized(bedOut.str()), inputText);
 }
 
+std::string FaiText() {
+      const std::string faiText{R"(
+chr1 1600 0 70 71
+chr2 400 1601 70 71
+)"};
+    return faiText.substr(1);
+}
+
+TEST(hmcnc_io, can_read_normal_fai) {
+
+  std::istringstream faiIn{Normalized(FaiText())};
+  std::vector<std::string> contigNames;
+  std::vector<int> contigLengths;
+
+  ReadFai(faiIn, contigNames, contigLengths);
+
+  ASSERT_EQ(contigNames.size(), 2);
+  EXPECT_EQ(contigNames[0], "chr1");
+  EXPECT_EQ(contigNames[1], "chr2");
+
+  ASSERT_EQ(contigLengths.size(), 2);
+  EXPECT_EQ(contigLengths[0], 1600);
+  EXPECT_EQ(contigLengths[1], 400);
+}
