@@ -1,15 +1,16 @@
 hmcnc_cpp_sources = files([
-                  'SamToBed.cpp',
-                  'viterbi.cpp',
-                  ])
+  'SamToBed.cpp',
+  'viterbi.cpp',
+])
 
  executable(
-     'hmcnc',
-     files([
-        'hmmcnc.cpp',
-        'main.cpp'
-         ]),
-     install : true,
-     dependencies : hmcnc_lib_deps,
-     cpp_args : hmcnc_cpp_args,
-     )
+  'hmcnc',
+  files([
+    'hmmcnc.cpp',
+    'hmcnc_io.cpp',
+    'main.cpp',
+  ]),
+  install : true,
+  dependencies : hmcnc_lib_deps,
+  cpp_args : hmcnc_cpp_args,
+)
