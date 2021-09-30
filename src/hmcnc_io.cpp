@@ -356,6 +356,7 @@ void WriteVCF(std::ostream &out,
       << '\n'
       << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read depth at "
     "this position for this sample\">"
+      << '\n'
       << "##FORMAT=<ID=BN,Number=1,Type=Float,Description=\"Likelihood ratio of CN=2 vs "
     "CN=1 or CN=3 for heterozygous snvs\">"
       << '\n'
@@ -377,7 +378,7 @@ void WriteVCF(std::ostream &out,
             << "SVTYPE=" << cntype << ";"
             << "END=" << vcfEndPos
             << ";SVLEN=" << cnLength
-	          << ";REGION="<< contigNames[c] << ":" << vcfStartPos << "-" << vcfEndPos
+            << ";REGION="<< contigNames[c] << ":" << vcfStartPos << "-" << vcfEndPos
             << ";IMPRECISE\t"
             << "CN:PP:DP"
             << intervals[c][i].altInfo << "\t"
