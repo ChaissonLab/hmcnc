@@ -19,7 +19,12 @@ struct Interval {
   float averageCoverage;
   double pVal;
   std::string filter;
-
+  std::string altInfo;
+  std::string altSample;
+  int distanceToFrontClip;
+  int distanceToEndClip;
+  int nFrontClip;
+  int nEndClip;
   Interval();
   Interval(int s, int e, int cn, float avg, double p);
 };

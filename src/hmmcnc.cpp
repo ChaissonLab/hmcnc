@@ -44,6 +44,7 @@ const float MISMAP_RATE=0.01;
 const double minNeg=-1*numeric_limits<double>::epsilon();
 int MAX_CN=6;
 double lepsi=-800;
+int averageReadLength=0;
 
 constexpr std::array<int8_t, 256> NucMap{
   4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 15
@@ -216,6 +217,13 @@ Interval::Interval(int s, int e, int cn, float avg, double p)
   , averageCoverage(avg)
   , pVal(p)
   , filter("PASS")
+  , altInfo("")
+  , altSample("")
+  , distanceToFrontClip(-1)
+  , distanceToEndClip(-1)
+  , nFrontClip(0)
+  , nEndClip(0)
+   
 { }
 
 // -----------
@@ -716,6 +724,40 @@ double ForwardBackwards(const vector<double> &startP,
   return finalCol;
 }
 
+void ApplyPriorToTransP(vector<vector<int> > &f,
+			int nStates,
+			vector<vector<double> > &prior,
+			vector<vector<double>>  &expCovCovTransP) {
+  //
+  // For now the prior is hard-wired for human genomes.
+  //
+  prior.resize(nStates);
+  for (int i=0; i < nStates; i++) {
+    prior[i].resize(nStates, 0);
+  }
+  // Assume the following:
+  //
+  if (nStates < 4) {
+    cerr << "ERROR number of states should be at least 4" << endl;
+    exit(1);
+  }
+  //
+  // Prior is to keep in the same state.
+  //
+  for (int contig=0; contig< f.size(); contig++) {
+    int nBins=f[contig].size();
+    for (int i=0; i < nStates; i++) {
+      expCovCovTransP[i][i] += nBins*10;
+    }
+    //      for (int j=0; j < nStates; j++) {
+    //	expCovCovTransP[i][j] += nBins* prior[i][j] * 10;
+    //      }
+    //    }
+  }
+}
+
+
+
 double BaumWelchEOnChrom(const vector<double> &startP,
 			 vector<vector<double>> &covCovTransP,
 			 vector<vector<double>> &emisP,
@@ -728,32 +770,6 @@ double BaumWelchEOnChrom(const vector<double> &startP,
   const int nStates = static_cast<int>(startP.size());
   const int nObs = obs.size();
   const double px = ForwardBackwards(startP, covCovTransP, emisP, obs, f, b);
-  /*
-  ofstream fb("fb.tsv");
-  for (int k=0; k < f[0].size()-1; k++) {
-    fb << k << '\t';
-    double maxfb=f[0][k]+b[0][k+1];
-    int maxi=0;
-    double fbSum=0;
-    for (int j=0; j < nStates; j++) {
-      double p=f[j][k] + b[j][k+1];
-      fbSum=PairSumOfLogP(fbSum, p);
-    }
-    for (int j=0; j < nStates; j++) {
-      double p=f[j][k] + b[j][k+1];
-      fb << std::setprecision(8) << f[j][k] << ", " << b[j][k+1] << ", " << f[j][k] + b[j][k+1];
-	//fCov[j][k] << ", " << bCov[j][k+1] << ", " << p-fbSum;
-      if (j +1 < nStates) { fb << '\t';}
-      if (maxfb < p) {
-	maxfb=p;
-	maxi=j;
-      }
-    }
-    fb << '\t' << maxi << '\t' << maxfb/fbSum << '\t' << obs[k] << '\n';
-
-  }
-  fb.close();
-*/
 
   for (int k=1; k< nObs-1; k++) {
     double logSum=0;
@@ -796,6 +812,54 @@ double BaumWelchEOnChrom(const vector<double> &startP,
   }
 
   return px;
+}
+
+void AssignNearestClip(vector<vector<int > > &clipBins,
+		       double averageCoverage,
+		       int maxSearch,
+		       vector<vector<Interval> > &intervals) {
+  int minClip=averageCoverage/4;
+  for (int contig=0; contig < intervals.size(); contig++) {
+    int lastClip=0;
+    int curInterval=0;
+    for (int i=0; i < intervals[contig].size(); i++) {
+      int maxClip=0;
+      int maxClipPos=-1;
+
+      // Do a bit of logic to determine when to stop the search
+      int searchEnd = min((int)clipBins[contig].size(),
+			  min(max(intervals[contig][i].start, intervals[contig][i].end-maxSearch),
+			      intervals[contig][i].start+maxSearch));
+      
+      for (int clipIndex=max(0, intervals[contig][i].start - maxSearch); clipIndex < searchEnd; clipIndex++) {
+	if (clipBins[contig][clipIndex] > maxClip) {
+	  maxClip = clipBins[contig][clipIndex];
+	  maxClipPos=clipIndex;
+	}
+      }
+      if (maxClipPos != -1) {
+	intervals[contig][i].distanceToFrontClip=abs(maxClipPos - intervals[contig][i].start);
+	intervals[contig][i].nFrontClip=maxClip;
+	cout << "Found start clip for " << contig << "\t" << i << "\t" << intervals[contig][i].distanceToFrontClip << "\t" << intervals[contig][i].nFrontClip << endl;	
+      }
+
+      // Look for clipping at the end of the interval
+      maxClip=0;
+      maxClipPos=-1;
+      for (int clipIndex =max(searchEnd, intervals[contig][i].end - maxSearch);
+	   clipIndex < min((int) clipBins[contig].size(), intervals[contig][i].end + maxSearch); clipIndex++) {
+	if (clipBins[contig][clipIndex] > maxClip) {
+	  maxClip = clipBins[contig][clipIndex];
+	  maxClipPos=clipIndex;
+	}
+      }
+      if (maxClipPos != -1) {
+	intervals[contig][i].distanceToEndClip=abs(maxClipPos - intervals[contig][i].end);
+	intervals[contig][i].nEndClip=maxClip;
+	cout << "Found End clip for " << contig << "\t" << i << "\t" << intervals[contig][i].distanceToEndClip << "\t" << intervals[contig][i].nEndClip << endl;	
+      }
+    }
+  }
 }
 
 void PrintIntervals(const string chrom, const vector<Interval> &intv, ostream &out) {
@@ -882,6 +946,9 @@ void WriteVCF(ostream &out,
       << "##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of "
     "the structural variant described in this record\">"
       << '\n'
+      << "##INFO=<ID=REGION,Number=1,Type=String,Description=\"Region of interval "
+    "for easy copy\">"
+      << '\n'
       << "##INFO=<ID=SVLEN,Number=.,Type=Integer,Description=\"Difference in "
     "length between REF and ALT alleles\">"
       << '\n'
@@ -895,6 +962,8 @@ void WriteVCF(ostream &out,
       << '\n'
       << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read depth at "
     "this position for this sample\">"
+      << "##FORMAT=<ID=BN,Number=1,Type=Float,Description=\"Likelihood ratio of CN=2 vs "
+    "CN=1 or CN=3 for heterozygous snvs\">"   
       << '\n'
       << "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" << sampleName
       << '\n';
@@ -910,9 +979,13 @@ void WriteVCF(ostream &out,
             << "SVTYPE=" << cntype << ";"
             << "END=" << intervals[c][i].end
             << ";SVLEN=" << intervals[c][i].end - intervals[c][i].start
+	    << ";REGION="<<contigNames[c] << ":" << intervals[c][i].start << "-" << intervals[c][i].end
             << ";IMPRECISE\t"
-            << "CN:PP:DP\t" << intervals[c][i].copyNumber << ":"
+            << "CN:PP:DP"
+	    << intervals[c][i].altInfo << "\t"
+	    << intervals[c][i].copyNumber << ":"
             << intervals[c][i].pVal << ":" << intervals[c][i].averageCoverage
+	    << intervals[c][i].altSample
             << '\n';
       }
     }
@@ -1332,6 +1405,7 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
     StorePosteriorMaxIntervals((*threadInfo->covBins)[curSeq],
 			       f, b,
 			       (*threadInfo->copyIntervals)[curSeq]);
+    cerr << "Stored " << (*threadInfo->copyIntervals)[curSeq].size() << " copy intervals for " << curSeq << endl;
   }
 }
 
@@ -1399,14 +1473,11 @@ void ParseChrom(ThreadInfo *threadInfo) {
           cerr << "Ending parsing of " << region << " with " << totalSize << " data and " << chunkNumber << " iterations." << '\n';
           break;
         }
-        /*
-        cout << "read " << bam_get_qname(b) << '\n';
-        if (strcmp("m64043_200714_124814/138021154/ccs", bam_get_qname(b)) == 0) {
-          cout << "poblem" << '\n';
-          }*/
         endpos=bam_endpos(b.get());
-        reads.push_back(std::move(b));
-        ++totalReads;
+	if ((b->core.flag & BAM_FSUPPLEMENTARY) == 0 && (b->core.flag & BAM_FSECONDARY) == 0) {
+	  reads.push_back(std::move(b));
+	  ++totalReads;	  
+	}
       }
       cerr << "Reading " << (*threadInfo->contigNames)[curSeq] << ", chunk " << chunkNumber << ".\t" << reads.size() << "/" << totalReads << " reads/total" << '\n';
       ++chunkNumber;
@@ -1418,7 +1489,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
         startpos=b->core.pos;
         (*(*threadInfo).totalReads)[curSeq]++;
         (*(*threadInfo).totalBases)[curSeq]+= endpos-startpos;
-
+	//	cout << startpos << "\t" << endpos << "\t" << endpos-startpos << "\t" << (*(*threadInfo).totalBases)[curSeq] / (*(*threadInfo).totalReads)[curSeq] << endl;
         const int nCigar=b->core.n_cigar;
         uint32_t*cigar=bam_get_cigar(b.get());
         int frontClip=-1, backClip=-1;
@@ -2024,8 +2095,11 @@ Parameters::Parameters()
     group(outputGroupName)->
     type_name("FILE");
 
+  CLI.add_option("--readLength", averageReadLength,
+		 "Set the average read length, special treatment of calls under this length.")->group(outputGroupName);
+
   CLI.add_option("-L", clipOutFileName,
-    "    ** Need description for clipOutFileName **  ")->
+    "Stores the number of reads with clipping > 500 bases in each bin.")->
     group(outputGroupName)->
     type_name("FILE");
 
@@ -2058,7 +2132,6 @@ int hmcnc(Parameters& params) {
 
   double scale=2;
   int maxState=10;
-  int averageReadLength=0;
 
   const string faiFileName{params.referenceName + ".fai"};
   vector<string> contigNames, allContigNames;
@@ -2260,8 +2333,9 @@ int hmcnc(Parameters& params) {
     }
     long totalBaseSum=0;
     int totalReadsSum=0;
-    totalBaseSum=accumulate(totalBases.begin(), totalBases.end(), 0);
-    totalReadsSum=accumulate(nReads.begin(), nReads.end(), 0);
+    
+    totalBaseSum=accumulate(totalBases.begin(), totalBases.end(), totalBaseSum);
+    totalReadsSum=accumulate(nReads.begin(), nReads.end(), totalReadsSum);
     averageReadLength=totalBaseSum/totalReadsSum;
     cerr << "Length cutoff of average read length " << averageReadLength << '\n';
     if (params.covBedOutFileName != "" ) {
@@ -2397,6 +2471,12 @@ int hmcnc(Parameters& params) {
       vector<vector<double> > priorCovCov;
       priorCovCov.resize(covCovTransP.size());
       int nSites=covBins[0].size();
+      vector<vector<double> > prior;
+      ApplyPriorToTransP(covBins,
+			 covCovTransP.size(),
+			 prior,
+			 expCovCovTransP);
+      
       BaumWelchM(startP, covCovTransP, emisP, binoP,
         params.model,
         stateTotCov, stateNCov,
@@ -2422,6 +2502,11 @@ int hmcnc(Parameters& params) {
   //
   assert(copyIntervals.size() <= contigNames.size());
   assert(snvs.size() <= contigNames.size());
+  AssignNearestClip(clipBins,
+		    mean,
+		    5,
+		    copyIntervals);
+  
   for (size_t c=0; c < contigNames.size(); c++) {
     int snvStart=0;
     for (size_t i=0; i < copyIntervals[c].size(); i++) {
@@ -2455,13 +2540,18 @@ int hmcnc(Parameters& params) {
           pCN += binoP[curCN-1][totCov][alt];
           pCN2 += binoP[1][totCov][alt];
         }
+	copyIntervals[c][i].altInfo += ":BN";
+	stringstream strm;
+	strm << pCN-pCN2;
+	copyIntervals[c][i].altSample += ":" + strm.str();
         if (pCN < pCN2) {
           copyIntervals[c][i].filter = "FAIL";
+	  
         }
         if (averageReadLength > 0 and copyIntervals[c][i].end-copyIntervals[c][i].start *2 < averageReadLength) {
           copyIntervals[c][i].filter = "FAIL";
         }
-	      snvStart=snvEnd;
+	snvStart=snvEnd;
       }
     }
   }
