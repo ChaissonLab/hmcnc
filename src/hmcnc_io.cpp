@@ -368,18 +368,22 @@ void WriteVCF(std::ostream &out,
 
         const std::string cntype = (intervals[c][i].copyNumber > 2) ? "DUP" : "DEL";
 
-        out << contigNames[c] << '\t' << intervals[c][i].start
+        const int vcfStartPos = intervals[c][i].start + 1;
+        const int vcfEndPos = intervals[c][i].end + 1;
+        const int cnLength = intervals[c][i].end - intervals[c][i].start;
+
+        out << contigNames[c] << '\t' << vcfStartPos
             << "\t.\t<CNV>\t<CNV>\t30\t" << intervals[c][i].filter << '\t'
             << "SVTYPE=" << cntype << ";"
-            << "END=" << intervals[c][i].end
-            << ";SVLEN=" << intervals[c][i].end - intervals[c][i].start
-	    << ";REGION="<<contigNames[c] << ":" << intervals[c][i].start << "-" << intervals[c][i].end
+            << "END=" << vcfEndPos
+            << ";SVLEN=" << cnLength
+	          << ";REGION="<< contigNames[c] << ":" << vcfStartPos << "-" << vcfEndPos
             << ";IMPRECISE\t"
             << "CN:PP:DP"
-	    << intervals[c][i].altInfo << "\t"
-	    << intervals[c][i].copyNumber << ":"
+            << intervals[c][i].altInfo << "\t"
+            << intervals[c][i].copyNumber << ":"
             << intervals[c][i].pVal << ":" << intervals[c][i].averageCoverage
-	    << intervals[c][i].altSample
+            << intervals[c][i].altSample
             << '\n';
       }
     }
