@@ -95,27 +95,64 @@ void ReadParameterFile(std::istream &inFile,
                        std::vector<std::vector<double>> &transP,
                        std::vector<std::vector<double>> &emisP) {
   std::string spacer;
+  std::string section;
+  int nr, nc;
+
+  //
+  // header
+  //
   inFile >> spacer >> nStates;
   inFile >> spacer >> covMean;
   inFile >> spacer >> covVar;
   inFile >> spacer >> maxState;
   inFile >> spacer >> maxCov;
-  inFile >> spacer;
+
+  //
+  // startP
+  //
+  inFile >> section;
+  if (section != "startP") {
+    std::cerr << "ERROR. Parameter file: expected startP section, found '"
+              << section << "' instead.\n";
+    exit(EXIT_FAILURE);
+  }
+
   double val;
   for (int i=0; i < nStates; i++) {
     inFile >> val;
     startP.push_back(val);
   }
-  int nr, nc;
-  inFile >> spacer >> nr >> nc;
+  if (startP.size() != nStates) {
+    std::cerr << "ERROR. Parameter file: unexpected number of startP values.";
+    exit(EXIT_FAILURE);
+  }
+
+  //
+  // transP
+  //
+  inFile >> section >> nr >> nc;
+  if (section != "transP") {
+    std::cerr << "ERROR. Parameter file: expected transP section, found '"
+              << section << "' instead.\n";
+    exit(EXIT_FAILURE);
+  }
   transP.resize(nr);
   for (int i=0; i < nr; i++) {
     for (int j=0; j < nc; j++) {
-      inFile>> val;
+      inFile >> val;
       transP[i].push_back(val);
     }
   }
-  inFile >> spacer >> nr >> nc;
+
+  //
+  // emisP
+  //
+  inFile >> section >> nr >> nc;
+  if (section != "emisP") {
+    std::cerr << "ERROR. Parameter file: expected emisP section, found '"
+              << section << "' instead.\n";
+    exit(EXIT_FAILURE);
+  }
   emisP.resize(nr);
   for (int i=0; i < nr; i++) {
     for (int j=0; j < nc; j++) {
@@ -203,40 +240,55 @@ void WriteParameterFile(std::ostream &outFile,
                         const std::vector<double> &startP,
                         const std::vector<std::vector<double>> &transP,
                         const std::vector<std::vector<double>> &emisP) {
+  //
+  // header
+  //
   outFile << "nStates\t" << nStates << '\n'
 	        << "covMean\t" << covMean << '\n'
 	        << "covVar\t" << covVar  << '\n'
 	        << "maxState\t" << maxState << '\n'
-	        << "maxCov\t" << maxCov << '\n'
-	        << "startP" << '\n';
-  for (size_t i=0; i < startP.size(); i++) {
-    outFile << startP[i];
-    if (i+1 < startP.size()) {
-      outFile << '\t';
-    }
-    outFile << '\n';
+	        << "maxCov\t" << maxCov << '\n';
+
+  //
+  // startP
+  //
+  outFile << "startP" << '\n';
+  for (const auto s : startP) {
+    outFile << s << '\n';
   }
 
+  bool firstColumn = true;
+
+  //
+  // transP
+  //
   assert(!transP.empty());
   outFile << "transP\t" << transP.size() << '\t' << transP[0].size() << '\n';
-  for (size_t i=0; i < transP.size(); i++) {
-    for (size_t j=0; j < transP[j].size(); j++) {
-      outFile << transP[i][j];
-      if (i+1 < transP.size()) {
+  for (const auto& row : transP) {
+    firstColumn = true;
+    for (const auto tp : row) {
+      if (!firstColumn) {
         outFile << '\t';
       }
+      outFile << tp;
+      firstColumn = false;
     }
     outFile << '\n';
   }
 
+  //
+  // emisP
+  //
   assert(!emisP.empty());
   outFile << "emisP\t" << emisP.size() << '\t' << emisP[0].size() << '\n';
-  for (size_t i=0; i < emisP.size(); i++) {
-    for (size_t j=0; j < emisP[j].size(); j++) {
-      outFile << emisP[i][j];
-      if (i+1 < emisP.size()) {
+  for (const auto& row : emisP) {
+    firstColumn = true;
+    for (const auto ep : row) {
+      if (!firstColumn) {
         outFile << '\t';
       }
+      outFile << ep;
+      firstColumn = false;
     }
     outFile << '\n';
   }
