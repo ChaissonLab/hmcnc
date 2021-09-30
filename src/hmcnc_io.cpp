@@ -343,9 +343,9 @@ void WriteVCF(std::ostream &out,
 void PrintModel(const std::string &label,
                 const std::vector<std::vector<double>> &model,
                 std::ostream &out) {
-  out << '\n' << label << ": \n";//
+  out << '\n' << label << " (" << model.size() << ") \n";
   for (size_t r=0; r<model.size(); r++) {
-    out << r <<":";
+    out << r << " (" << model[r].size() << ") :";
     for (const auto e : model[r]) {
       out << '\t' << e;
     }
