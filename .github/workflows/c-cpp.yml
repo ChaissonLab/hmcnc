@@ -18,7 +18,7 @@ jobs:
       id: install-boost
       with:
         boost_version: 1.73.0
-    - run: pip install meson ninja
+    - run: pip install meson ninja cram
     - run: meson setup builddir/
       env:
         CC: gcc
@@ -37,7 +37,7 @@ jobs:
       with:
         boost_version: 1.73.0
     - run: brew install gcc
-    - run: pip install meson ninja
+    - run: pip install meson ninja cram
     - run: meson setup builddir/
       env:
         CC: gcc
