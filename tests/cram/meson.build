@@ -17,6 +17,6 @@ foreach t : hmcnc_cram_tests
     env : [
       '__HMCNC_EXE=' + hmcnc_exe.full_path(),
     ],
-    tmeout : 86400
+    timeout : 86400
   )
 endforeach

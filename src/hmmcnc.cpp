@@ -2208,6 +2208,17 @@ int hmcnc(Parameters& params) {
       WriteParameterFile(params.paramOutFile, nStates, mean, var, maxState, maxCov, startP, covCovTransP, emisP);
     }
   }
+  else {
+    //
+    // Use parameters from file to compute copyIntervals
+    //
+    vector<vector<double>> f;
+    vector<vector<double>> b;
+    for (size_t i = 0; i < covBins.size(); ++i) {
+      ForwardBackwards(startP, covCovTransP, emisP, covBins[0], f, b);
+      StorePosteriorMaxIntervals(covBins[0], f, b, copyIntervals[i]);
+    }
+  }
 
   //
   // Now filter cn=1 and cn=3 intervals, or short calls
