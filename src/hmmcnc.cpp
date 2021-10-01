@@ -709,31 +709,45 @@ void AssignNearestClip(vector<vector<int > > &clipBins,
 			      intvStart+maxSearch));
 
       for (int clipIndex=max(0, intvStart - maxSearch); clipIndex < searchEnd; clipIndex++) {
-	if (clipBins[contig][clipIndex] > maxClip and clipBins[contig][clipIndex] > minClip) {
-	  maxClip = clipBins[contig][clipIndex];
-	  maxClipPos=clipIndex;
-	}
+        if (clipBins[contig][clipIndex] > maxClip and clipBins[contig][clipIndex] > minClip) {
+          maxClip = clipBins[contig][clipIndex];
+          maxClipPos=clipIndex;
+        }
       }
       if (maxClipPos != -1) {
-	intervals[contig][i].distanceToFrontClip=abs(maxClipPos - intvStart);
-	intervals[contig][i].nFrontClip=maxClip;
-	cerr << "Found start clip for " << contig << "\t" << i << "\t" << intervals[contig][i].distanceToFrontClip << "\t" << intervals[contig][i].nFrontClip << "\t" << contigNames[contig] << ":" << intervals[contig][i].start << "-" << intervals[contig][i].end  << "\t" << intervals[contig][i].copyNumber << endl;
+        intervals[contig][i].distanceToFrontClip=abs(maxClipPos - intvStart);
+        intervals[contig][i].nFrontClip=maxClip;
+        cerr << "Found start clip for " << contig << "\t"
+             << i << "\t"
+             << intervals[contig][i].distanceToFrontClip << "\t"
+             << intervals[contig][i].nFrontClip << "\t"
+             << contigNames[contig] << ":"
+             << intervals[contig][i].start << "-"
+             << intervals[contig][i].end  << "\t"
+             << intervals[contig][i].copyNumber << endl;
       }
 
       // Look for clipping at the end of the interval
       maxClip=0;
       maxClipPos=-1;
-      for (int clipIndex =max(searchEnd, intvEnd - maxSearch);
-	   clipIndex < min((int) clipBins[contig].size(), intvEnd + maxSearch); clipIndex++) {
-	if (clipBins[contig][clipIndex] > maxClip and clipBins[contig][clipIndex] > minClip) {
-	  maxClip = clipBins[contig][clipIndex];
-	  maxClipPos=clipIndex;
-	}
+      for (int clipIndex = max(searchEnd, intvEnd - maxSearch);
+	         clipIndex < min((int) clipBins[contig].size(), intvEnd + maxSearch); clipIndex++) {
+        if (clipBins[contig][clipIndex] > maxClip and clipBins[contig][clipIndex] > minClip) {
+          maxClip = clipBins[contig][clipIndex];
+          maxClipPos=clipIndex;
+        }
       }
       if (maxClipPos != -1) {
-	intervals[contig][i].distanceToEndClip=abs(maxClipPos - intvEnd);
-	intervals[contig][i].nEndClip=maxClip;
-	cerr << "Found End clip for " << contig << "\t" << i << "\t" << intervals[contig][i].distanceToEndClip << "\t" << intervals[contig][i].nEndClip << "\t" << contigNames[contig] << ":" << intervals[contig][i].start << "-" << intervals[contig][i].end <<  "\t" << intervals[contig][i].copyNumber << endl;
+        intervals[contig][i].distanceToEndClip=abs(maxClipPos - intvEnd);
+        intervals[contig][i].nEndClip=maxClip;
+        cerr << "Found End clip for " << contig << "\t"
+             << i << "\t"
+             << intervals[contig][i].distanceToEndClip << "\t"
+             << intervals[contig][i].nEndClip << "\t"
+             << contigNames[contig] << ":"
+             << intervals[contig][i].start << "-"
+             << intervals[contig][i].end <<  "\t"
+             << intervals[contig][i].copyNumber << endl;
       }
     }
   }
@@ -1214,7 +1228,8 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
     StorePosteriorMaxIntervals((*threadInfo->covBins)[curSeq],
 			       f, b,
 			       (*threadInfo->copyIntervals)[curSeq]);
-    cerr << "Stored " << (*threadInfo->copyIntervals)[curSeq].size() << " copy intervals for " << curSeq << endl;
+    cerr << "Stored " << (*threadInfo->copyIntervals)[curSeq].size()
+         << " copy intervals for " << curSeq << endl;
   }
 }
 
@@ -1283,10 +1298,10 @@ void ParseChrom(ThreadInfo *threadInfo) {
           break;
         }
         endpos=bam_endpos(b.get());
-	if ((b->core.flag & BAM_FSUPPLEMENTARY) == 0 && (b->core.flag & BAM_FSECONDARY) == 0) {
-	  reads.push_back(std::move(b));
-	  ++totalReads;
-	}
+        if ((b->core.flag & BAM_FSUPPLEMENTARY) == 0 && (b->core.flag & BAM_FSECONDARY) == 0) {
+          reads.push_back(std::move(b));
+          ++totalReads;
+        }
       }
       cerr << "Reading " << (*threadInfo->contigNames)[curSeq] << ", chunk " << chunkNumber << ".\t" << reads.size() << "/" << totalReads << " reads/total" << '\n';
       ++chunkNumber;
@@ -1792,7 +1807,8 @@ Parameters::Parameters()
     type_name("FILE");
 
   CLI.add_option("--readLength", averageReadLength,
-		 "Set the average read length, special treatment of calls under this length.")->group(outputGroupName);
+		 "Set the average read length, special treatment of calls under this length.")->
+     group(outputGroupName);
 
   CLI.add_option("-L", clipOutFileName,
     "Stores the number of reads with clipping > 500 bases in each bin.")->
@@ -2237,10 +2253,10 @@ int hmcnc(Parameters& params) {
           pCN += binoP[curCN-1][totCov][alt];
           pCN2 += binoP[1][totCov][alt];
         }
-	copyIntervals[c][i].altInfo += ":BN";
-	stringstream strm;
-	strm << pCN-pCN2;
-	copyIntervals[c][i].altSample += ":" + strm.str();
+        copyIntervals[c][i].altInfo += ":BN";
+        stringstream strm;
+        strm << pCN-pCN2;
+        copyIntervals[c][i].altSample += ":" + strm.str();
         if (pCN < pCN2) {
           copyIntervals[c][i].filter = "FAIL";
 
@@ -2248,11 +2264,11 @@ int hmcnc(Parameters& params) {
         if (averageReadLength > 0 and copyIntervals[c][i].end-copyIntervals[c][i].start *2 < averageReadLength) {
           copyIntervals[c][i].filter = "FAIL";
         }
-	// Give it a chance to recover with clipping
-	if (copyIntervals[c][i].nFrontClip > 0 or copyIntervals[c][i].nEndClip > 0) {
-	  copyIntervals[c][i].filter = "PASS";
-	}
-	snvStart=snvEnd;
+        // Give it a chance to recover with clipping
+        if (copyIntervals[c][i].nFrontClip > 0 or copyIntervals[c][i].nEndClip > 0) {
+          copyIntervals[c][i].filter = "PASS";
+        }
+        snvStart=snvEnd;
       }
     }
   }
