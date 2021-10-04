@@ -20,6 +20,7 @@
 #include "htslib/faidx.h"
 #include "htslib/hts.h"
 #include "htslib/sam.h"
+#include "htslib/thread_pool.h"
 
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/math/distributions/negative_binomial.hpp>
@@ -111,6 +112,22 @@ struct HtslibIteratorDeleter {
   void operator()(hts_itr_t* iter) const noexcept {
     hts_itr_destroy(iter);
     iter = nullptr;
+  }
+};
+
+struct ThreadedSamFile {
+  htsThreadPool ThreadPool = {nullptr, 0};
+  samFile* File = nullptr;
+
+  ~ThreadedSamFile() {
+    if (File) {
+      sam_close(File);
+      File = nullptr;
+    }
+    if (ThreadPool.pool) {
+      hts_tpool_destroy(ThreadPool.pool);
+      ThreadPool.pool = nullptr;
+    }
   }
 };
 
@@ -231,7 +248,8 @@ Interval::Interval(int s, int e, int cn, float avg, double p)
 using namespace std;
 class ThreadInfo {
 public:
-  std::unique_ptr<htsFile, HtslibFileDeleter> htsfp;
+  // std::unique_ptr<htsFile, HtslibFileDeleter> htsfp;
+  std::unique_ptr<ThreadedSamFile> htsfp;
   std::shared_ptr<hts_idx_t> bamidx;
   std::shared_ptr<bam_hdr_t> samHeader;
   std::unique_ptr<faidx_t, FastaIndexDeleter> fai;
@@ -1288,7 +1306,8 @@ void ParseChrom(ThreadInfo *threadInfo) {
       int bufSize=0;
       while (bufSize < 100000000 and continueParsing) {
         std::unique_ptr<bam1_t, BamRecordDeleter> b(bam_init1());
-        const int res=sam_itr_next(threadInfo->htsfp.get(), regionIter.get(), b.get());
+        // const int res=sam_itr_next(threadInfo->htsfp.get(), regionIter.get(), b.get());
+        const int res=sam_itr_next(threadInfo->htsfp->File, regionIter.get(), b.get());
         bufSize+= b->l_data;
         totalSize+= b->l_data;
 
@@ -1952,7 +1971,10 @@ int hmcnc(Parameters& params) {
 
   for (int procIndex = 0; procIndex < params.nproc ; procIndex++) {
     if (params.bamFileName != "") {
-      threadInfo[procIndex].htsfp.reset(hts_open(params.bamFileName.c_str(),"r"));
+      // threadInfo[procIndex].htsfp.reset(hts_open(params.bamFileName.c_str(),"r"));
+      threadInfo[procIndex].htsfp->File = hts_open(params.bamFileName.c_str(),"r");
+      threadInfo[procIndex].htsfp->ThreadPool.pool = hts_tpool_init(4);
+      hts_set_opt(threadInfo[procIndex].htsfp->File, HTS_OPT_THREAD_POOL, &threadInfo[procIndex].htsfp->ThreadPool);
     }
     threadInfo[procIndex].bamidx = bamidx;
     threadInfo[procIndex].samHeader=samHeader;
