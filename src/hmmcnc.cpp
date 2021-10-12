@@ -1806,7 +1806,7 @@ Parameters::Parameters()
     type_name("FILE");
 
   CLI.add_option("-P", paramOutFile,
-    "Write trained parameter file.")->
+    "Write trained parameter file.(4 iterations)")->
     group(outputGroupName)->
     type_name("FILE");
 
@@ -2206,15 +2206,20 @@ int hmcnc(Parameters& params) {
 
       printModel(updateTransP, &cerr);
       covCovTransP=updateTransP;
+  
+
+      if (params.paramOutFile != "") {
+        string s = std::to_string(i);
+        string outName = params.paramOutFile + "." + s;
+        WriteParameterFile( outName , nStates, mean, var, maxState, maxCov, startP, covCovTransP, emisP);
+      }
     }
 
     //
     // Eventually this needs to update for some multi-chrom code.
     //
 
-    if (params.paramOutFile != "") {
-      WriteParameterFile(params.paramOutFile, nStates, mean, var, maxState, maxCov, startP, covCovTransP, emisP);
-    }
+
   }
   else {
     //
