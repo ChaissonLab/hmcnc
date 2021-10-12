@@ -45,6 +45,7 @@ const double minNeg=-1*numeric_limits<double>::epsilon();
 int MAX_CN=6;
 double lepsi=-800;
 int averageReadLength=0;
+bool writeFail=true;
 
 constexpr std::array<int8_t, 256> NucMap{
   4,4,4,4, 4,4,4,4, 4,4,4,4, 4,4,4,4,  // 15
@@ -933,7 +934,8 @@ void WriteVCF(ostream &out,
 	      const string &sampleName,
 	      const vector<string> &contigNames,
 	      const vector<int> &contigLengths,
-	      const vector<vector<Interval> > &intervals) {
+	      const vector<vector<Interval> > &intervals,
+	      bool writeFail=false) {
   out << "##fileformat=VCFv4.1" << '\n'
       << "##source=hmmcnc_v" << version << '\n'
       << "##reference=" << reference << '\n';
@@ -975,7 +977,9 @@ void WriteVCF(ostream &out,
       if (intervals[c][i].copyNumber != 2) {
 
         const std::string cntype = (intervals[c][i].copyNumber > 2) ? "DUP" : "DEL";
-
+	if (intervals[c][i].filter == "FAIL" and writeFail == false) {
+	  continue;
+	}
         out << contigNames[c] << '\t' << intervals[c][i].start
             << "\t.\t<CNV>\t<CNV>\t30\t" << intervals[c][i].filter << '\t'
             << "SVTYPE=" << cntype << ";"
@@ -2111,6 +2115,10 @@ Parameters::Parameters()
     group(outputGroupName)->
     type_name("FILE");
 
+  CLI.add_option("--writeFail", writeFail,
+    "Write calls flagged as FAIL.")->
+    group(outputGroupName)->type_name("");
+  
   //
   // Post-parsing sanity checks
   //
@@ -2559,6 +2567,9 @@ int hmcnc(Parameters& params) {
 	if (copyIntervals[c][i].nFrontClip > 0 or copyIntervals[c][i].nEndClip > 0) {
 	  copyIntervals[c][i].filter = "PASS";
 	}
+	if (copyIntervals[c][i].end - copyIntervals[c][i].start < 1000) {
+	  copyIntervals[c][i].filter = "FAIL";
+	}
 	snvStart=snvEnd;
       }
     }
@@ -2573,7 +2584,7 @@ int hmcnc(Parameters& params) {
   else {
     outPtr = &cout;
   }
-  WriteVCF(*outPtr, params.referenceName, params.sampleName, contigNames, contigLengths, copyIntervals);
+  WriteVCF(*outPtr, params.referenceName, params.sampleName, contigNames, contigLengths, copyIntervals, writeFail);
 
   return 0;
 }
