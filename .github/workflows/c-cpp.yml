@@ -18,11 +18,13 @@ jobs:
       id: install-boost
       with:
         boost_version: 1.73.0
-    - run: pip install meson ninja
-    - run: meson setup builddir/
+    - run: pip install meson ninja cram
+    - run: mkdir /home/runner/work/hmcnc/hmcnc/installdir
+    - run: meson setup --prefix /home/runner/work/hmcnc/hmcnc/installdir builddir/
       env:
         CC: gcc
         BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
+    - run: meson install -C builddir/
     - run: meson test -C builddir/ -v
 
   macos:
@@ -37,9 +39,10 @@ jobs:
       with:
         boost_version: 1.73.0
     - run: brew install gcc
-    - run: pip install meson ninja
+    - run: pip install meson ninja cram
     - run: meson setup builddir/
       env:
         CC: gcc
         BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
+    - run: meson install -C builddir/
     - run: meson test -C builddir/ -v

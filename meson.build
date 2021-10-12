@@ -1,16 +1,16 @@
 project(
-        'hmcnc',
-        ['cpp', 'c'],
-        version : '0.0.1',
-        default_options : [
-                        'buildtype=release',
-                        'warning_level=3',
-                        'cpp_std=c++14',
-                        'c_std=c11',
-                        'b_ndebug=if-release'],
-       license : 'MIT',
-       meson_version : '>= 0.52.0',
-       )
+  'hmcnc',
+  ['cpp', 'c'],
+  version : '0.0.1',
+  default_options : [
+    'buildtype=release',
+    'warning_level=3',
+    'cpp_std=c++14',
+    'c_std=c11',
+    'b_ndebug=if-release'],
+  license : 'MIT',
+  meson_version : '>= 0.52.0',
+)
 
 ############
 # CXXFLAGS #
@@ -19,19 +19,19 @@ project(
 hmcnc_warning_flags = []
 cpp = meson.get_compiler('cpp')
 foreach cflag: [
-        '-Wduplicated-cond',
-        '-Wduplicated-branches',
-        '-Wlogical-op',
-        '-Wrestrict',
-        '-Wnull-dereference',
-        '-Wuseless-cast',
-        '-Wdouble-promotion',
-        '-Wshadow',
-        '-Wformat=1',
-        ]
-        if cpp.has_argument(cflag)
-           hmcnc_warning_flags += cflag
-        endif
+  '-Wduplicated-cond',
+  '-Wduplicated-branches',
+  '-Wlogical-op',
+  '-Wrestrict',
+  '-Wnull-dereference',
+  '-Wuseless-cast',
+  '-Wdouble-promotion',
+  '-Wshadow',
+  '-Wformat=1',
+  ]
+  if cpp.has_argument(cflag)
+      hmcnc_warning_flags += cflag
+  endif
 endforeach
 
 hmcnc_cpp_args = hmcnc_warning_flags
@@ -53,15 +53,18 @@ htslib_dep = dependency('htslib', required : true, version : '>=1.4', fallback :
 zlib_dep = dependency('zlib', required : true, fallback : ['zlib', 'zlib_dep'])
 
 hmcnc_lib_deps = [
-               boost_dep,
-               threads_dep,
-               zlib_dep,
-               htslib_dep,
-               ]
+  boost_dep,
+  threads_dep,
+  zlib_dep,
+  htslib_dep,
+]
 
 #####################
 # sources + library #
 #####################
+
+# only for unit tests, not main  exe
+hmcnc_include_directories = include_directories('include')
 
 subdir('src')
 subdir('tests')

@@ -2,3 +2,5 @@
 
 /subprojects/*
 !/subprojects/*.wrap
+
+/tests/cram/*.t.err
