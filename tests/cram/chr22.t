@@ -31,7 +31,7 @@ Compare
 # ----------------------------
 
 Run hmcnc on chr22 - using existing parameter file
-  $ "${__HMCNC_EXE}" "${DATA}"/chr22.fa -b "${DATA}"/chr22.bed -t 4 -p "${CRAMTMP}"/out.params -o "${CRAMTMP}"/from_params.vcf 2> /dev/null
+  $ "${__HMCNC_EXE}" "${DATA}"/chr22.fa -b "${DATA}"/chr22.bed -t 4 -p "${CRAMTMP}"/out.params.1 -o "${CRAMTMP}"/from_params.vcf 2> /dev/null
 
 Extract fields from result VCF
   $ grep -v "^#" "${CRAMTMP}"/from_params.vcf | cut -f 2 > "${CRAMTMP}"/from_params_positions.txt
