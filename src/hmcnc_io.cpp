@@ -358,8 +358,9 @@ void WriteVCF(std::ostream &out,
       << '\n'
       << "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Read depth at "
     "this position for this sample\">"
+      << '\n'
       << "##FORMAT=<ID=BN,Number=1,Type=Float,Description=\"Likelihood ratio of CN=2 vs "
-    "CN=1 or CN=3 for heterozygous snvs\">"   
+    "CN=1 or CN=3 for heterozygous snvs\">"
       << '\n'
       << "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" << sampleName
       << '\n';
@@ -369,21 +370,26 @@ void WriteVCF(std::ostream &out,
       if (intervals[c][i].copyNumber != 2) {
 
         const std::string cntype = (intervals[c][i].copyNumber > 2) ? "DUP" : "DEL";
-	if (intervals[c][i].filter == "FAIL" and writeFail == false) {
-	  continue;
-	}
-        out << contigNames[c] << '\t' << intervals[c][i].start
+        if (intervals[c][i].filter == "FAIL" and writeFail == false) {
+          continue;
+        }
+
+        const int vcfStartPos = intervals[c][i].start + 1;
+        const int vcfEndPos = intervals[c][i].end + 1;
+        const int cnLength = intervals[c][i].end - intervals[c][i].start;
+
+        out << contigNames[c] << '\t' << vcfStartPos
             << "\t.\t<CNV>\t<CNV>\t30\t" << intervals[c][i].filter << '\t'
             << "SVTYPE=" << cntype << ";"
-            << "END=" << intervals[c][i].end
-            << ";SVLEN=" << intervals[c][i].end - intervals[c][i].start
-	    << ";REGION="<<contigNames[c] << ":" << intervals[c][i].start << "-" << intervals[c][i].end
+            << "END=" << vcfEndPos
+            << ";SVLEN=" << cnLength
+	          << ";REGION="<< contigNames[c] << ":" << vcfStartPos << "-" << vcfEndPos
             << ";IMPRECISE\t"
             << "CN:PP:DP"
-	    << intervals[c][i].altInfo << "\t"
-	    << intervals[c][i].copyNumber << ":"
+            << intervals[c][i].altInfo << "\t"
+            << intervals[c][i].copyNumber << ":"
             << intervals[c][i].pVal << ":" << intervals[c][i].averageCoverage
-	    << intervals[c][i].altSample
+	          << intervals[c][i].altSample
             << '\n';
       }
     }
