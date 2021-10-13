@@ -1190,10 +1190,14 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
     const int curSeq = *((*threadInfo).lastSeq);
     *(threadInfo->lastSeq) = *(threadInfo->lastSeq) + 1;
     pthread_mutex_unlock(threadInfo->semaphore);
-
+    
     if (curSeq >= threadInfo->contigNames->size()) {
       break;
     }
+    if ((*(*threadInfo).totalReads)[curSeq] == 0) {
+      break;
+    }
+    
     vector<vector<double>> f, b, expCovCovTransP, expEmisP;
     expCovCovTransP.resize(threadInfo->transP->size());
     for (int i=0; i < expCovCovTransP.size(); i++) {
@@ -1472,13 +1476,23 @@ int EstimateCoverage(const string &bamFileName,
     long totCov=0;
     assert(useChromIndex <= allCovBins.size());
     assert(lastBin <= allCovBins[useChromIndex].size());
+    int binCov=0;
+    int nSamples=0;
     for (size_t binIndex=0; binIndex<lastBin; binIndex++) {
-      totCov+=allCovBins[useChromIndex][binIndex];
+      binCov=allCovBins[useChromIndex][binIndex];
+      totCov+=binCov;
+      if (binCov > 0) { nSamples++;}
     }
-    mean=totCov/lastBin;
+    if (nSamples > 0) {
+      mean=totCov/((float)nSamples);
+    }
+    else {
+      cerr << "Could not estimate coverage using precomputed coverage on chrom " << useChrom << " because there were 0 covered bins\n";
+      exit(1);
+    }
     //
     // Recompute summary stats using limited data
-    int nSamples=0;
+    nSamples=0;
     totCov=0;
     long totCovSq=0;
     for (size_t binIndex=0; binIndex<lastBin; binIndex++) {
@@ -1947,7 +1961,7 @@ int hmcnc(Parameters& params) {
   std::vector<pthread_t> threads(params.nproc);
   std::vector<pthread_attr_t> threadAttr(params.nproc);
   std::vector<ThreadInfo> threadInfo(params.nproc);
-
+  std::vector<float> contigAvgCoverage(contigNames.size());
   pthread_mutex_t semaphore;
   pthread_mutex_init(&semaphore, NULL);
 
