@@ -155,6 +155,23 @@ bool SNV::operator<(const SNV &rhs) const {
 
 // -----------
 
+void StorePerChromAverageCoverage(vector<vector<int>  > &covBins, vector<double> &averageCoverage) {
+  for (int i=0; i < covBins.size(); i++) {
+    long totCov=0;
+    int nonZero=0;
+    for (auto &c: covBins[i]) {
+      if (c > 0) {
+	totCov+=c;
+	nonZero++;
+      }
+    }
+    if (nonZero > 0) {
+      averageCoverage[i] = totCov / ((double)nonZero);
+    }
+  }
+}
+
+
 void Reset(vector<vector<double> > &v) {
   for (auto &e : v) {
     fill(e.begin(), e.end(), 0);
@@ -258,6 +275,7 @@ public:
   double *pModel;
   vector<int> *totalReads;
   vector<long> *totalBases;
+  vector<double> *averageCoverage;
 };
 
 static void printModel(const vector<vector<double>> &transP, ostream *strm)
@@ -1194,7 +1212,7 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
     if (curSeq >= threadInfo->contigNames->size()) {
       break;
     }
-    if ((*(*threadInfo).totalReads)[curSeq] == 0) {
+    if ((*(*threadInfo).averageCoverage)[curSeq] == 0) {
       break;
     }
     
@@ -1366,7 +1384,12 @@ void ParseChrom(ThreadInfo *threadInfo) {
       }
       (*threadInfo->covBins)[curSeq][bin] =totCov/BIN_LENGTH;
     }
-
+    if ((*threadInfo->totalReads)[curSeq] > 0) {
+      (*threadInfo->averageCoverage)[curSeq] = (*threadInfo->totalBases)[curSeq]/((double)(*threadInfo->totalReads)[curSeq]);
+    }
+    else {
+      (*threadInfo->averageCoverage)[curSeq] = 0;
+    }
     //
     // Detect SNVS
     //
@@ -1910,6 +1933,7 @@ int hmcnc(Parameters& params) {
   vector<vector<double>> expCovCovTransP, expCovSnvTransP, expSnvSnvTransP, expEmisP;
   vector<int> nReads;
   vector<long> totalBases;
+  vector<double> averageCoverage;
 
   if (params.covBedInFileName != "") {
     ReadCoverage(params.covBedInFileName, contigNames, covBins);
@@ -1970,6 +1994,7 @@ int hmcnc(Parameters& params) {
   copyIntervals.resize(contigNames.size());
   nReads.resize(contigNames.size());
   totalBases.resize(contigNames.size());
+  averageCoverage.resize(contigNames.size(), 0);
   double pModel=0;
 
   for (int procIndex = 0; procIndex < params.nproc ; procIndex++) {
@@ -2008,6 +2033,7 @@ int hmcnc(Parameters& params) {
     threadInfo[procIndex].pModel=&pModel;
     threadInfo[procIndex].totalReads = &nReads;
     threadInfo[procIndex].totalBases = &totalBases;
+    threadInfo[procIndex].averageCoverage = &averageCoverage;
   }
 
   //
@@ -2081,6 +2107,9 @@ int hmcnc(Parameters& params) {
     if (params.snvOutFileName != "") {
       WriteSNVs(params.snvOutFileName, contigNames, snvs);
     }
+  }
+  if (params.covBedInFileName != "") {
+    StorePerChromAverageCoverage(covBins, averageCoverage);
   }
 
   EstimateCoverage(params.bamFileName, covBins, allContigNames, allContigLengths, params.useChrom, mean, var);
