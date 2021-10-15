@@ -36,8 +36,11 @@ using std::vector;
 using std::cout;
 using std::string;
 using std::log;
+using std::tuple;
 using namespace std;
 
+
+const int MIN_DEL_LENGTH=5000;
 const int BIN_LENGTH=100;
 const int MIN_CLIP_LENGTH=500;
 const float MISMAP_RATE=0.01;
@@ -1128,11 +1131,15 @@ int IncrementCounts(bam1_t *b, int contigLength,
                     vector<int> &nC,
                     vector<int> &nG,
                     vector<int> &nT,
-                    vector<int> &nDel) {
+                    vector<int> &nDel,
+                    vector<tuple<char,int, int,char> > &delT) {
   const int readLength = b->core.l_qseq;
   if (readLength < BIN_LENGTH or b->core.qual < 10 or b->core.flag & 0x800) {
     return 0;
   }
+
+  char ctg = b->core.tid;
+  char rdnm = b->core.l_qname;
 
   vector<char> seq(readLength);
   uint8_t *q = bam_get_seq(b);
@@ -1159,6 +1166,10 @@ int IncrementCounts(bam1_t *b, int contigLength,
     }
     if (op == BAM_CDEL) {
       const int stop=refPos+opLen;
+      if (opLen >= MIN_DEL_LENGTH ){
+        delT[regionOffset] = make_tuple(ctg, refPos,opLen, rdnm );
+        //delT.push_back(make_tuple(ctg, refPos,opLen, rdnm ));
+      }
       for (; refPos < stop and refPos < contigLength; refPos++) {
         nDel[regionOffset]+=1;
         regionOffset++;
@@ -1288,6 +1299,14 @@ void ParseChrom(ThreadInfo *threadInfo) {
     const int contigLength=threadInfo->contigLengths->at(curSeq);
 
     vector<int> nA(contigLength, 0), nC(contigLength, 0), nT(contigLength, 0), nG(contigLength,0), nDel(contigLength, 0);
+/////////////////////////////////////
+
+
+vector<tuple<char,int, int,char> > delT;
+delT.resize(contigLength);
+
+/////////////////////////////////////
+
 
     stringstream regionStrm;
     regionStrm << (*(*threadInfo).contigNames)[curSeq];// << ":1-" << contigLength;
@@ -1334,7 +1353,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
       pthread_mutex_unlock(threadInfo->semaphore);
 
       for (auto& b : reads) {
-        IncrementCounts(b.get(), contigLength, nA, nC, nG, nT, nDel);
+        IncrementCounts(b.get(), contigLength, nA, nC, nG, nT, nDel, delT);
         endpos=bam_endpos(b.get());
         startpos=b->core.pos;
         (*(*threadInfo).totalReads)[curSeq]++;
