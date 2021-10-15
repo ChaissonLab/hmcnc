@@ -249,7 +249,6 @@ Interval::Interval(int s, int e, int cn, float avg, double p)
 
 // -----------
 
-using namespace std;
 class ThreadInfo {
 public:
   std::unique_ptr<htsFile, HtslibFileDeleter> htsfp;
@@ -313,25 +312,6 @@ static void printEmissions(const vector<vector<double> > &emisP, ostream *strm) 
   }
 }
 
-double max_over_row(const vector<vector<double>> &v, size_t col, size_t nStates) {
-
-  double maxi=-1 * (std::numeric_limits<double>::max());
-  for (const auto &val : v) {
-    assert(col < val.size());
-    maxi=std::max(val[col], maxi);
-  }
-  return maxi;
-}
-
-double max_over_rows(const vector<vector<double>> &v, size_t col,
-                     const vector<vector<double>> &v2, size_t nextState,
-                     size_t nStates ) {
-  double maxi2=-1 * (std::numeric_limits<double>::max());
-  for(size_t i=0;i< nStates;i++) {
-    maxi2=std::max(v[i][col] + v2[i][nextState], maxi2);
-  }
-  return maxi2;
-}
 
 double LgNegBinom(int cn, int cov, float Hmean, float Hvar) {
   double result=0;
@@ -451,22 +431,6 @@ double LgPrpoiss(int cn,  int cov, int Hmean) {
   return result;
 }
 
-static void correctModel(vector<vector<double>> &transP,
-                         int nStates)
-{
-  double sum;
-  assert(nStates < transP.size());
-  for (int i=0;i<nStates;i++) {
-    sum = 0;
-    assert(nStates < transP[i].size());
-    for (int j=0;j<nStates;j++) {
-      sum+= std::exp(transP[i][j]);
-    }
-    for (int j=0;j<nStates;j++) {
-      transP[i][j]= log(std::exp(transP[i][j])/sum);
-    }
-  }
-}//correctModel
 
 void CombineEmissions(const vector<int> &obs,
                       const vector<SNV> &snvs,
@@ -1302,8 +1266,8 @@ void ParseChrom(ThreadInfo *threadInfo) {
 /////////////////////////////////////
 
 
-vector<tuple<char,int, int,char> > delT;
-delT.resize(contigLength);
+    vector<tuple<char,int, int,char> > delT;
+    delT.resize(contigLength);
 
 /////////////////////////////////////
 
@@ -2110,6 +2074,8 @@ int hmcnc(Parameters& params) {
     else {
       ParseChrom(&threadInfo[0]);
     }
+
+
     long totalBaseSum=0;
     int totalReadsSum=0;
 
