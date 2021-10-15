@@ -2096,7 +2096,12 @@ int hmcnc(Parameters& params) {
 
     totalBaseSum=accumulate(totalBases.begin(), totalBases.end(), totalBaseSum);
     totalReadsSum=accumulate(nReads.begin(), nReads.end(), totalReadsSum);
-    averageReadLength=totalBaseSum/totalReadsSum;
+    if (totalReadsSum > 0) {
+      averageReadLength=totalBaseSum/totalReadsSum;
+    }
+    else {
+      averageReadLength=0;
+    }
     cerr << "Length cutoff of average read length " << averageReadLength << '\n';
     if (params.covBedOutFileName != "" ) {
       WriteCovBed(params.covBedOutFileName, contigNames, covBins);
