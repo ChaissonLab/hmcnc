@@ -826,7 +826,7 @@ void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedInterv
   //return the merged intervals
   for (int i = 0; i < n; i++) {
     if (!(intervals[i].start == INT_MIN && intervals[i].end== INT_MIN)) {
-      mergedIntervals.push_back(Interval(intervals[i].start,intervals[i].end,   ));
+      mergedIntervals.push_back(Interval(intervals[i].start,intervals[i].end   ));
     }
   }
 }
@@ -840,6 +840,7 @@ void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & cop
 
   // Size of the two lists
   int n = mergedIntervals.size(), m = copyIntervals.size();
+  //std::sort(copyIntervals.begin(), copyIntervals.end() , compareInterval);
 
   // Loop through all intervals unless
   // one of the interval gets exhausted
@@ -1409,7 +1410,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
 
     vector<int> nA(contigLength, 0), nC(contigLength, 0), nT(contigLength, 0), nG(contigLength,0), nDel(contigLength, 0);
 
-    vector<Interval> delt;
+   // vector<Interval> delt;
 
     stringstream regionStrm;
     regionStrm << (*(*threadInfo).contigNames)[curSeq];// << ":1-" << contigLength;
@@ -1456,7 +1457,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
       pthread_mutex_unlock(threadInfo->semaphore);
 
       for (auto& b : reads) {
-        IncrementCounts(b.get(), contigLength, nA, nC, nG, nT, nDel, delt);
+        IncrementCounts(b.get(), contigLength, nA, nC, nG, nT, nDel, (*(threadInfo)->delT)[curSeq]);
         endpos=bam_endpos(b.get());
         startpos=b->core.pos;
         (*(*threadInfo).totalReads)[curSeq]++;
@@ -1497,9 +1498,6 @@ void ParseChrom(ThreadInfo *threadInfo) {
 
         b.reset(nullptr);
       }
-
-              (*(threadInfo)->delT)[curSeq].push_back(delt);
-
     }
 
 
