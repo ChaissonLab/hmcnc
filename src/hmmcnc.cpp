@@ -269,6 +269,7 @@ public:
   vector<vector<double>> *transP, *emisP, *expTransP, *expEmisP;
   vector<double> *startP;
   vector<vector<Interval>> *copyIntervals;
+  vector<vector<Interval>> *delT;
   int maxCov, maxState;
   bool exit;
   double mean;
@@ -279,6 +280,7 @@ public:
   vector<int> *totalReads;
   vector<long> *totalBases;
   vector<double> *averageCoverage;
+
 };
 
 static void printModel(const vector<vector<double>> &transP, ostream *strm)
@@ -805,10 +807,10 @@ void StorePosteriorMaxIntervals(const vector<int> &cov,
 bool compareInterval(Interval i1, Interval i2) {return (i1.start < i2.start);} 
 
 void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedIntervals) {
-  const int INT_MIN=-1;
+  
   // Sort the intervals vector**
   std::sort(intervals.begin(), intervals.end() , compareInterval);
-  
+  const int n = intervals.size();
   // Traverse the sorted array
   for (int i = 0; i < n - 1; i++) {
     // Compare i and (i + 1)th intervals
@@ -817,16 +819,14 @@ void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedInterv
       intervals[i + 1].start = std::min(intervals[i].start, intervals[i + 1].start);
       intervals[i + 1].end= std::max(intervals[i].end, intervals[i + 1].end);
       // Remove previous interval
-      intervals[i].start = INT_MIN;
-      intervals[i].end= INT_MIN;
-  } else {
-        // Do not merge
-    }
-}
+      intervals[i].start = -1;
+      intervals[i].end= -1;
+    } 
+  }
   //return the merged intervals
   for (int i = 0; i < n; i++) {
-    if (!(intervals[i].start == INT_MIN && intervals[i].end== INT_MIN)) {
-      mergedIntervals.push_back(Interval(intervals[i].start,intervals[i].end   ));
+    if (!(intervals[i].start == -1 && intervals[i].end== -1)) {
+      mergedIntervals.push_back(Interval(intervals[i].start,intervals[i].end ,0,0.0,0.0  ));
     }
   }
 }
@@ -834,16 +834,10 @@ void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedInterv
 void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & copyIntervals)
 {
  
-  // i and j pointers for
-  // mergedIntervals and copyIntervals respectively
   int i = 0, j = 0;
-
-  // Size of the two lists
   int n = mergedIntervals.size(), m = copyIntervals.size();
   //std::sort(copyIntervals.begin(), copyIntervals.end() , compareInterval);
 
-  // Loop through all intervals unless
-  // one of the interval gets exhausted
   while (i < n && j < m) {
     if (copyIntervals[j].copyNumber > 1 ){
         j++;
@@ -851,7 +845,6 @@ void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & cop
     }
     // Left bound for intersecting segment
     int l = max(mergedIntervals[i].start, copyIntervals[j].start);
-
     // Right bound for intersecting segment
     int r = min(mergedIntervals[i].end, copyIntervals[j].end);
     int inter = r-l;
@@ -859,13 +852,12 @@ void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & cop
       float lr = (float)((inter)/(mergedIntervals[i].end - mergedIntervals[i].start));
       float rr = (float)((inter)/(copyIntervals[i].end - copyIntervals[i].start));
       if (lr >0.5 && rr > 0.5 ){
-
-
-        //overwrite copynumber interval if CN <2
- 
+        //reciprocal 0.5 overlap
+        copyIntervals[i].start = mergedIntervals[i].start;
+        copyIntervals[i].end = mergedIntervals[i].end;
+        copyIntervals[i].filter = "dPASS";
       }        
     }
-    // If i-th interval's right bound is smaller,increment i else increment j
     if (mergedIntervals[i].end < copyIntervals[j].end)
         i++;
     else
@@ -1249,8 +1241,8 @@ int IncrementCounts(bam1_t *b, int contigLength,
     return 0;
   }
 
-  string ctg = b->core.tid;
-  string rdnm = b->core.l_qname;
+ // string ctg = b->core.tid;
+//  string rdnm = b->core.l_qname;
 
   vector<char> seq(readLength);
   uint8_t *q = bam_get_seq(b);
@@ -1276,9 +1268,9 @@ int IncrementCounts(bam1_t *b, int contigLength,
       continue;
     }
     if (op == BAM_CDEL) {
-      const int stop=refPos+opLen;
+      int stop=refPos+opLen;
       if (opLen >= MIN_DEL_LENGTH ){
-        delT.push_back(Interval( refPos, stop)); //, ctg, rdnm ))
+        delT.push_back(Interval( refPos, stop,0,0.0,0.0)); //, ctg, rdnm ))
       }
       for (; refPos < stop and refPos < contigLength; refPos++) {
         nDel[regionOffset]+=1;
