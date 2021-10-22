@@ -21,12 +21,17 @@ struct Interval {
   std::string filter;
   std::string altInfo;
   std::string altSample;
+  std::string ctg;
+  std::string read_name;
   int distanceToFrontClip;
   int distanceToEndClip;
   int nFrontClip;
   int nEndClip;
   Interval();
   Interval(int s, int e, int cn, float avg, double p);
+  //Interval(int s, int e); 
+  //, std::string contig, std::string read_nam);
+
 };
 
 struct SNV {
@@ -131,6 +136,12 @@ double LgPrpoiss(int cn,  int cov, int Hmean);
 void Moments(const std::vector<double> &v, double &ex, double &var);
 
 double PairSumOfLogP(double a, double b);
+
+bool compareInterval(Interval i1, Interval i2);
+
+void mergeIntervals(std::vector<Interval> &intervals, std::vector<Interval> &mergedIntervals, std::string contig);
+
+void intersectDelCall( std::vector<Interval> &mergedIntervals, std::vector<Interval> & copyIntervals);
 
 void StorePosteriorMaxIntervals(const std::vector<int> &cov,
 				                        const std::vector<std::vector<double>> &f,

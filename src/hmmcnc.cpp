@@ -36,8 +36,12 @@ using std::vector;
 using std::cout;
 using std::string;
 using std::log;
+using std::tuple;
 using namespace std;
 
+
+const int MIN_DEL_LENGTH=5000;
+const int MIN_MAPQ=10;
 const int BIN_LENGTH=100;
 const int MIN_CLIP_LENGTH=500;
 const float MISMAP_RATE=0.01;
@@ -246,7 +250,6 @@ Interval::Interval(int s, int e, int cn, float avg, double p)
 
 // -----------
 
-using namespace std;
 class ThreadInfo {
 public:
   std::unique_ptr<htsFile, HtslibFileDeleter> htsfp;
@@ -266,6 +269,7 @@ public:
   vector<vector<double>> *transP, *emisP, *expTransP, *expEmisP;
   vector<double> *startP;
   vector<vector<Interval>> *copyIntervals;
+  vector<vector<Interval>> *delT;
   int maxCov, maxState;
   bool exit;
   double mean;
@@ -276,6 +280,7 @@ public:
   vector<int> *totalReads;
   vector<long> *totalBases;
   vector<double> *averageCoverage;
+
 };
 
 static void printModel(const vector<vector<double>> &transP, ostream *strm)
@@ -310,25 +315,6 @@ static void printEmissions(const vector<vector<double> > &emisP, ostream *strm) 
   }
 }
 
-double max_over_row(const vector<vector<double>> &v, size_t col, size_t nStates) {
-
-  double maxi=-1 * (std::numeric_limits<double>::max());
-  for (const auto &val : v) {
-    assert(col < val.size());
-    maxi=std::max(val[col], maxi);
-  }
-  return maxi;
-}
-
-double max_over_rows(const vector<vector<double>> &v, size_t col,
-                     const vector<vector<double>> &v2, size_t nextState,
-                     size_t nStates ) {
-  double maxi2=-1 * (std::numeric_limits<double>::max());
-  for(size_t i=0;i< nStates;i++) {
-    maxi2=std::max(v[i][col] + v2[i][nextState], maxi2);
-  }
-  return maxi2;
-}
 
 double LgNegBinom(int cn, int cov, float Hmean, float Hvar) {
   double result=0;
@@ -448,22 +434,6 @@ double LgPrpoiss(int cn,  int cov, int Hmean) {
   return result;
 }
 
-static void correctModel(vector<vector<double>> &transP,
-                         int nStates)
-{
-  double sum;
-  assert(nStates < transP.size());
-  for (int i=0;i<nStates;i++) {
-    sum = 0;
-    assert(nStates < transP[i].size());
-    for (int j=0;j<nStates;j++) {
-      sum+= std::exp(transP[i][j]);
-    }
-    for (int j=0;j<nStates;j++) {
-      transP[i][j]= log(std::exp(transP[i][j])/sum);
-    }
-  }
-}//correctModel
 
 void CombineEmissions(const vector<int> &obs,
                       const vector<SNV> &snvs,
@@ -834,6 +804,76 @@ void StorePosteriorMaxIntervals(const vector<int> &cov,
 }
 
 
+bool compareInterval(Interval i1, Interval i2) {return (i1.start < i2.start);} 
+
+void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedIntervals, string contig) {
+  
+  std::sort(intervals.begin(), intervals.end() , compareInterval);
+  const int n = intervals.size();
+  for (int i = 0; i < n - 1; i++) {
+    //debug
+    //std::cout<<contig<<'\t'<<intervals[i].start<<'\t'<<intervals[i].end<<'\n';
+
+    if ((intervals[i].start >= intervals[i + 1].start && intervals[i].start <= intervals[i + 1].end) || (intervals[i].end>= intervals[i + 1].start && intervals[i].end<= intervals[i + 1].end)) { 
+      intervals[i + 1].start = std::min(intervals[i].start, intervals[i + 1].start);
+      intervals[i + 1].end= std::max(intervals[i].end, intervals[i + 1].end);
+      // Remove previous interval
+      intervals[i].start = -1;
+      intervals[i].end= -1;
+    } 
+  }
+  for (int i = 0; i < n; i++) {
+    if (!(intervals[i].start == -1 && intervals[i].end== -1)) {
+      mergedIntervals.push_back(Interval(intervals[i].start,intervals[i].end ,0,0.0,0.0  ));
+    }
+  }
+}
+
+void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & copyIntervals)
+{
+ 
+  int i = 0, j = 0;
+  int n = mergedIntervals.size(), m = copyIntervals.size();
+  //std::sort(copyIntervals.begin(), copyIntervals.end() , compareInterval);
+
+  while (i < n && j < m) 
+  {
+    if (copyIntervals[j].copyNumber > 1 )
+    {
+        j++;
+    }
+    else
+    {
+
+      // Left bound for intersecting segment
+      int l = max(mergedIntervals[i].start, copyIntervals[j].start);
+      // Right bound for intersecting segment
+      int r = min(mergedIntervals[i].end, copyIntervals[j].end);
+      int inter = r-l;
+      if (inter > 0)
+      {
+        //float lr = (float)((inter)/(mergedIntervals[i].end - mergedIntervals[i].start));
+        //float rr = (float)((inter)/(copyIntervals[i].end - copyIntervals[i].start));
+        copyIntervals[j].start = mergedIntervals[i].start;
+        copyIntervals[j].end = mergedIntervals[i].end;
+        copyIntervals[j].altInfo += ":DF";
+        copyIntervals[j].altSample += ":1" ;
+        i++;j++;
+      }
+      else if (mergedIntervals[i].end < copyIntervals[j].end)
+      {
+          i++;
+      }
+      else if (mergedIntervals[i].end > copyIntervals[j].end)
+      {
+        copyIntervals[j].altInfo += ":DF";
+        copyIntervals[j].altSample += ":0" ;
+        j++;
+      }
+    }
+  }
+
+}
 
 void UpdateEmisP(vector<vector<double>> &emisP,
                  vector<vector<double>> &expEmisP,
@@ -1130,9 +1170,10 @@ int IncrementCounts(bam1_t *b, int contigLength,
                     vector<int> &nT,
                     vector<int> &nDel) {
   const int readLength = b->core.l_qseq;
-  if (readLength < BIN_LENGTH or b->core.qual < 10 or b->core.flag & 0x800) {
+  if (readLength < BIN_LENGTH or b->core.qual < MIN_MAPQ or b->core.flag & 0x800) {
     return 0;
   }
+
 
   vector<char> seq(readLength);
   uint8_t *q = bam_get_seq(b);
@@ -1159,6 +1200,88 @@ int IncrementCounts(bam1_t *b, int contigLength,
     }
     if (op == BAM_CDEL) {
       const int stop=refPos+opLen;
+      for (; refPos < stop and refPos < contigLength; refPos++) {
+        nDel[regionOffset]+=1;
+        regionOffset++;
+      }
+      continue;
+    }
+    if (op == BAM_CMATCH or op == BAM_CEQUAL or op == BAM_CDIFF) {
+      if (refPos + opLen <= 0) {
+        refPos += opLen;
+        qPos += opLen;
+        continue;
+      }
+      else {
+        for (int p=0; p < opLen; p++) {
+          if (refPos >= contigLength) {
+            break;
+          }
+          if (refPos >= 1) {
+            first=false;
+            const char nuc=toupper(seq[qPos]);
+            assert(regionOffset < nA.size());
+            /*
+            if (regionOffset == 20504515 or refPos == 20504515 ) {
+              cout << regionOffset << '\t' << nuc << '\t' << nC[regionOffset] << '\t' << nT[regionOffset] << '\t' << bam_get_qname(b) << '\n';
+              }*/
+            if (nuc == 'A') { nA[regionOffset]++; }
+            if (nuc == 'C') { nC[regionOffset]++; }
+            if (nuc == 'G') { nG[regionOffset]++; }
+            if (nuc == 'T') { nT[regionOffset]++; }
+            regionOffset++;
+          }
+          refPos++;
+          qPos++;
+        }
+      }
+    }
+  }
+  return 1;
+}
+int IncrementCounts(bam1_t *b, int contigLength,
+                    vector<int> &nA,
+                    vector<int> &nC,
+                    vector<int> &nG,
+                    vector<int> &nT,
+                    vector<int> &nDel,
+                    vector<Interval> &delT) {
+  const int readLength = b->core.l_qseq;
+  if (readLength < BIN_LENGTH or b->core.qual < MIN_MAPQ or b->core.flag & 0x800) {
+    return 0;
+  }
+
+ // string ctg = b->core.tid;
+//  string rdnm = b->core.l_qname;
+
+  vector<char> seq(readLength);
+  uint8_t *q = bam_get_seq(b);
+  for (int i=0; i < readLength; i++) {
+    seq[i]=seq_nt16_str[bam_seqi(q,i)];
+  }
+  uint32_t* cigar = bam_get_cigar(b);
+  const int refLen = bam_cigar2rlen(b->core.n_cigar, cigar);
+  int qPos=0;
+  int refPos = b->core.pos;
+  int regionOffset=refPos;
+  bool first=true;
+  for (size_t ci=0; ci < b->core.n_cigar; ci++) {
+    const int opLen=bam_cigar_oplen(cigar[ci]);
+    const int op=bam_cigar_op(cigar[ci]);
+
+    if (op == BAM_CSOFT_CLIP) {
+      qPos += opLen;
+      continue;
+    }
+    if (op == BAM_CINS) {
+      qPos += opLen;
+      continue;
+    }
+    if (op == BAM_CDEL) {
+      int stop=refPos+opLen;
+      if (opLen >= MIN_DEL_LENGTH ){
+        delT.push_back(Interval( refPos, stop,0,0.0,0.0)); //, ctg, rdnm ))
+      }
       for (; refPos < stop and refPos < contigLength; refPos++) {
         nDel[regionOffset]+=1;
         regionOffset++;
@@ -1290,6 +1413,8 @@ void ParseChrom(ThreadInfo *threadInfo) {
 
     vector<int> nA(contigLength, 0), nC(contigLength, 0), nT(contigLength, 0), nG(contigLength,0), nDel(contigLength, 0);
 
+   // vector<Interval> delt;
+
     stringstream regionStrm;
     regionStrm << (*(*threadInfo).contigNames)[curSeq];// << ":1-" << contigLength;
 
@@ -1335,12 +1460,13 @@ void ParseChrom(ThreadInfo *threadInfo) {
       pthread_mutex_unlock(threadInfo->semaphore);
 
       for (auto& b : reads) {
-        IncrementCounts(b.get(), contigLength, nA, nC, nG, nT, nDel);
+        IncrementCounts(b.get(), contigLength, nA, nC, nG, nT, nDel, (*(threadInfo)->delT)[curSeq]);
         endpos=bam_endpos(b.get());
         startpos=b->core.pos;
         (*(*threadInfo).totalReads)[curSeq]++;
         (*(*threadInfo).totalBases)[curSeq]+= endpos-startpos;
-	//	cout << startpos << "\t" << endpos << "\t" << endpos-startpos << "\t" << (*(*threadInfo).totalBases)[curSeq] / (*(*threadInfo).totalReads)[curSeq] << endl;
+
+
         const int nCigar=b->core.n_cigar;
         uint32_t*cigar=bam_get_cigar(b.get());
         int frontClip=-1, backClip=-1;
@@ -1370,9 +1496,14 @@ void ParseChrom(ThreadInfo *threadInfo) {
           const int bin=endpos/BIN_LENGTH;
           (*threadInfo->clipBins)[curSeq][bin] += 1;
         }
+
+
+
         b.reset(nullptr);
       }
     }
+
+
     // Never compute in the last bin
     const int nBins=contigLength/BIN_LENGTH;
 
@@ -1918,6 +2049,7 @@ int hmcnc(Parameters& params) {
 
   vector<vector<int>> covBins;
   vector<vector<int>> clipBins;
+
   double mean;
   double var;
   int nStates;
@@ -1926,6 +2058,7 @@ int hmcnc(Parameters& params) {
   vector<vector<double>> covCovTransP, covSnvTransP, snvSnvTransP;
   vector<vector<double>> updateTransP;
   vector<vector<SNV>> snvs;
+
   vector<vector<int>> copyNumber;
   vector< vector<double>> fCov, bCov, fSNV, bSNV;
   vector<vector<double>> emisP;
@@ -1941,6 +2074,7 @@ int hmcnc(Parameters& params) {
   }
 
   if (params.clipInFileName != "") {
+    //Read clips?
     ReadCoverage(params.clipInFileName, contigNames, clipBins);
   }
 
@@ -1991,8 +2125,20 @@ int hmcnc(Parameters& params) {
   pthread_mutex_init(&semaphore, NULL);
 
   int curSeq=0;
+
+  /////////////////////////////////////
+
+  vector<vector<Interval>> delT;
+  delT.resize(contigNames.size());
+
+  vector<vector<Interval>> MdelT;
+  MdelT.resize(contigNames.size());
+
+
+/////////////////////////////////////
   vector<vector<Interval>> copyIntervals;
   copyIntervals.resize(contigNames.size());
+
   nReads.resize(contigNames.size());
   totalBases.resize(contigNames.size());
   averageCoverage.resize(contigNames.size(), 0);
@@ -2035,6 +2181,9 @@ int hmcnc(Parameters& params) {
     threadInfo[procIndex].totalReads = &nReads;
     threadInfo[procIndex].totalBases = &totalBases;
     threadInfo[procIndex].averageCoverage = &averageCoverage;
+
+    threadInfo[procIndex].delT = &delT;
+
   }
 
   //
@@ -2092,6 +2241,8 @@ int hmcnc(Parameters& params) {
     else {
       ParseChrom(&threadInfo[0]);
     }
+
+
     long totalBaseSum=0;
     int totalReadsSum=0;
 
@@ -2338,17 +2489,27 @@ int hmcnc(Parameters& params) {
           copyIntervals[c][i].filter = "FAIL";
         }
 
-	// Give it a chance to recover with clipping
-	if (copyIntervals[c][i].nFrontClip > 0 or copyIntervals[c][i].nEndClip > 0) {
-	  copyIntervals[c][i].filter = "PASS";
-	}
-	if (copyIntervals[c][i].end - copyIntervals[c][i].start < 1000) {
-	  copyIntervals[c][i].filter = "FAIL";
-	}
-	snvStart=snvEnd;
+      	// Give it a chance to recover with clipping
+      	if (copyIntervals[c][i].nFrontClip > 0 or copyIntervals[c][i].nEndClip > 0) {
+      	  copyIntervals[c][i].filter = "PASS";
+      	}
+      	if (copyIntervals[c][i].end - copyIntervals[c][i].start < 1000) {
+      	  copyIntervals[c][i].filter = "FAIL";
+      	}
+	      snvStart=snvEnd;
       }
     }
+
+ // Add gap-based deletion call from delT structure (sort, aggregate, consensus).
+  // remove overlapping depth-based deletion call.
+
+    mergeIntervals(delT[c], MdelT[c], contigNames[c] );
+
+    intersectDelCall(MdelT[c], copyIntervals[c] );
+
+
   }
+
 
   ostream *outPtr;
   ofstream outFile;

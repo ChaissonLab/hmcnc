@@ -362,6 +362,8 @@ void WriteVCF(std::ostream &out,
       << "##FORMAT=<ID=BN,Number=1,Type=Float,Description=\"Likelihood ratio of CN=2 vs "
     "CN=1 or CN=3 for heterozygous snvs\">"
       << '\n'
+      << "##FORMAT=<ID=DF,Number=1,Type=Integer,Description=\"0/1 if DEL call was checked and passed in CIGAR parse\">"
+      << '\n'
       << "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t" << sampleName
       << '\n';
   for (size_t c = 0; c < contigNames.size(); c++) {
