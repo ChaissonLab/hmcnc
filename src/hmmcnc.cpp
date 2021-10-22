@@ -1268,6 +1268,11 @@ void ParseChrom(ThreadInfo *threadInfo) {
     pthread_mutex_lock(threadInfo->semaphore);
 
     const int curSeq = *((*threadInfo).lastSeq);
+    if (curSeq >= threadInfo->contigNames->size()) {
+      pthread_mutex_unlock(threadInfo->semaphore);
+      break;
+    }
+    
     *(threadInfo->lastSeq) = *(threadInfo->lastSeq) + 1;
     (*(*threadInfo).totalReads)[curSeq] = 0;
     (*(*threadInfo).totalBases)[curSeq] = 0;
@@ -1275,10 +1280,6 @@ void ParseChrom(ThreadInfo *threadInfo) {
     //
     // Deal with race condition by double checking curSeq;
     //
-    if (curSeq >= threadInfo->contigNames->size()) {
-      pthread_mutex_unlock(threadInfo->semaphore);
-      break;
-    }
 
     (*threadInfo).procChroms.push_back(curSeq);
     //    (*threadInfo).covBins->push_back(vector<int>());
