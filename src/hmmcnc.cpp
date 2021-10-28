@@ -36,7 +36,6 @@ using std::vector;
 using std::cout;
 using std::string;
 using std::log;
-using std::tuple;
 using namespace std;
 
 
@@ -280,7 +279,6 @@ public:
   vector<int> *totalReads;
   vector<long> *totalBases;
   vector<double> *averageCoverage;
-
 };
 
 static void printModel(const vector<vector<double>> &transP, ostream *strm)
@@ -829,7 +827,7 @@ void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedInterv
   }
 }
 
-void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & copyIntervals)
+void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & copyIntervals, double mean)
 {
  
   int i = 0, j = 0;
@@ -858,6 +856,12 @@ void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & cop
         copyIntervals[j].end = mergedIntervals[i].end;
         copyIntervals[j].altInfo += ":DF";
         copyIntervals[j].altSample += ":1" ;
+
+        if (((double)copyIntervals[j].averageCoverage) > (mean/4.0) ){
+          copyIntervals[j].copyNumber = 1;
+
+        }
+        else{copyIntervals[j].copyNumber = 0;}
         i++;j++;
       }
       else if (mergedIntervals[i].end < copyIntervals[j].end)
@@ -1413,8 +1417,6 @@ void ParseChrom(ThreadInfo *threadInfo) {
 
     vector<int> nA(contigLength, 0), nC(contigLength, 0), nT(contigLength, 0), nG(contigLength,0), nDel(contigLength, 0);
 
-   // vector<Interval> delt;
-
     stringstream regionStrm;
     regionStrm << (*(*threadInfo).contigNames)[curSeq];// << ":1-" << contigLength;
 
@@ -1496,14 +1498,9 @@ void ParseChrom(ThreadInfo *threadInfo) {
           const int bin=endpos/BIN_LENGTH;
           (*threadInfo->clipBins)[curSeq][bin] += 1;
         }
-
-
-
         b.reset(nullptr);
       }
     }
-
-
     // Never compute in the last bin
     const int nBins=contigLength/BIN_LENGTH;
 
@@ -2049,7 +2046,6 @@ int hmcnc(Parameters& params) {
 
   vector<vector<int>> covBins;
   vector<vector<int>> clipBins;
-
   double mean;
   double var;
   int nStates;
@@ -2058,7 +2054,6 @@ int hmcnc(Parameters& params) {
   vector<vector<double>> covCovTransP, covSnvTransP, snvSnvTransP;
   vector<vector<double>> updateTransP;
   vector<vector<SNV>> snvs;
-
   vector<vector<int>> copyNumber;
   vector< vector<double>> fCov, bCov, fSNV, bSNV;
   vector<vector<double>> emisP;
@@ -2074,7 +2069,6 @@ int hmcnc(Parameters& params) {
   }
 
   if (params.clipInFileName != "") {
-    //Read clips?
     ReadCoverage(params.clipInFileName, contigNames, clipBins);
   }
 
@@ -2138,7 +2132,6 @@ int hmcnc(Parameters& params) {
 /////////////////////////////////////
   vector<vector<Interval>> copyIntervals;
   copyIntervals.resize(contigNames.size());
-
   nReads.resize(contigNames.size());
   totalBases.resize(contigNames.size());
   averageCoverage.resize(contigNames.size(), 0);
@@ -2183,7 +2176,6 @@ int hmcnc(Parameters& params) {
     threadInfo[procIndex].averageCoverage = &averageCoverage;
 
     threadInfo[procIndex].delT = &delT;
-
   }
 
   //
@@ -2241,8 +2233,6 @@ int hmcnc(Parameters& params) {
     else {
       ParseChrom(&threadInfo[0]);
     }
-
-
     long totalBaseSum=0;
     int totalReadsSum=0;
 
@@ -2505,7 +2495,7 @@ int hmcnc(Parameters& params) {
 
     mergeIntervals(delT[c], MdelT[c], contigNames[c] );
 
-    intersectDelCall(MdelT[c], copyIntervals[c] );
+    intersectDelCall(MdelT[c], copyIntervals[c] , mean);
 
 
   }

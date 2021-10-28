@@ -21,17 +21,12 @@ struct Interval {
   std::string filter;
   std::string altInfo;
   std::string altSample;
-  std::string ctg;
-  std::string read_name;
   int distanceToFrontClip;
   int distanceToEndClip;
   int nFrontClip;
   int nEndClip;
   Interval();
   Interval(int s, int e, int cn, float avg, double p);
-  //Interval(int s, int e); 
-  //, std::string contig, std::string read_nam);
-
 };
 
 struct SNV {
@@ -141,7 +136,7 @@ bool compareInterval(Interval i1, Interval i2);
 
 void mergeIntervals(std::vector<Interval> &intervals, std::vector<Interval> &mergedIntervals, std::string contig);
 
-void intersectDelCall( std::vector<Interval> &mergedIntervals, std::vector<Interval> & copyIntervals);
+void intersectDelCall( std::vector<Interval> &mergedIntervals, std::vector<Interval> & copyIntervals, double mean);
 
 void StorePosteriorMaxIntervals(const std::vector<int> &cov,
 				                        const std::vector<std::vector<double>> &f,
