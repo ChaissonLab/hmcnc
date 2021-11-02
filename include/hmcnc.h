@@ -136,7 +136,7 @@ bool compareInterval(Interval i1, Interval i2);
 
 void mergeIntervals(std::vector<Interval> &intervals, std::vector<Interval> &mergedIntervals, std::string contig);
 
-void intersectDelCall( std::vector<Interval> &mergedIntervals, std::vector<Interval> & copyIntervals);
+void intersectDelCall( std::vector<Interval> &mergedIntervals, std::vector<Interval> & copyIntervals, double mean);
 
 void StorePosteriorMaxIntervals(const std::vector<int> &cov,
 				                        const std::vector<std::vector<double>> &f,
