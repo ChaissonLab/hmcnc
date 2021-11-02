@@ -24,7 +24,7 @@ void ReadCoverage(std::istream &covFile,
   std::vector<std::string> fields;
   while (std::getline(covFile, line)) {
     fields.clear();
-    boost::split(fields, line, boost::is_any_of("\t "));
+    boost::split(fields, line, boost::is_any_of("\t"));
     if (fields.size() < 4) {
       std::cerr << "ERROR. Invalid BED input: '" << line << "'\n";
       exit(EXIT_FAILURE);
@@ -309,6 +309,39 @@ void WriteSNVs(std::ostream &snvOut,
     }
   }
 }
+
+void WriteBed( const std::vector<std::vector<Interval>> &intv, 
+  std::ostream &out, 
+  const std::vector<std::string> &contigNames) {
+  
+  for (size_t c=0; c < contigNames.size(); c++) {
+    for ( size_t i=0; i < intv[c].size(); i++ ){
+      if (intv[c][i].copyNumber == 2){
+        continue;
+      }
+      const int cnLength = intv[c][i].end - intv[c][i].start;
+
+      out << contigNames[c] << '\t'
+          << intv[c][i].start << '\t'
+          << intv[c][i].end << '\t'
+          << intv[c][i].copyNumber << '\t'
+          << intv[c][i].averageCoverage << '\t'
+          << cnLength <<'\t'
+          << intv[c][i].pVal << '\t'
+          << intv[c][i].filter<< '\t' 
+          << intv[c][i].altInfo << "\t"
+          << intv[c][i].altSample<< '\n';
+    }
+  }
+}
+
+void WriteBed(const std::vector<std::vector<Interval>> &intv,
+            const std::string &bedFileName,   
+            const std::vector<std::string> &contigNames) {
+  std:: ofstream bedOut{bedFileName.c_str()};
+  WriteBed(intv, bedOut, contigNames);
+}
+
 
 void WriteSNVs(const std::string &snvFileName,
                const std::vector<std::string> &contigNames,

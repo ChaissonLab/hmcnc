@@ -56,6 +56,7 @@ struct Parameters {
   std::string paramOutFile;
   std::string covBedInFileName;
   std::string covBedOutFileName;
+  std::string outBedName;
   std::string clipInFileName;
   std::string clipOutFileName;
   std::string outFileName;
@@ -154,11 +155,7 @@ void UpdateEmisP(std::vector<std::vector<double>> &emisP,
                  std::vector<std::vector<double>> &expEmisP,
                  int model=NEG_BINOM);
 
-double max_over_row(const std::vector<std::vector<double>> &v,
-                    size_t col, size_t nStates);
-double max_over_rows(const std::vector<std::vector<double>> &v, size_t col,
-                     const std::vector<std::vector<double>> &v2, size_t nextState,
-                     size_t nStates);
+
 
 // --------------------------
 // I/O methods
@@ -217,9 +214,20 @@ void WriteParameterFile(const std::string &fileName, int nStates, double covMean
 void WriteSNVs(std::ostream &snvFile,
                const std::vector<std::string> &contigNames,
                const std::vector<std::vector<SNV>> &snvs);
+
 void WriteSNVs(const std::string &snvFileName,
                const std::vector<std::string> &contigNames,
                const std::vector<std::vector<SNV>> &snvs);
+
+void WriteBed(  const std::vector <std::vector<Interval>> &intv, 
+                std::ostream &out, 
+                const std::vector<std::string> &contigNames);
+
+void WriteBed(const std::vector<std::vector<Interval>> &intv,
+            const std::string &bedFileName,   
+            const std::vector<std::string> &contigNames);
+
+
 
 void WriteVCF(std::ostream &out, const std::string &refName,
               const std::string &sampleName,

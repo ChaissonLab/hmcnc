@@ -38,7 +38,7 @@ using std::string;
 using std::log;
 using namespace std;
 
-
+const double MIN_LR=2;
 const int MIN_DEL_LENGTH=5000;
 const int MIN_MAPQ=10;
 const int BIN_LENGTH=100;
@@ -164,8 +164,8 @@ void StorePerChromAverageCoverage(vector<vector<int>  > &covBins, vector<double>
     int nonZero=0;
     for (auto &c: covBins[i]) {
       if (c > 0) {
-	totCov+=c;
-	nonZero++;
+      	totCov+=c;
+      	nonZero++;
       }
     }
     if (nonZero > 0) {
@@ -1998,6 +1998,11 @@ Parameters::Parameters()
     "Write calls flagged as FAIL.")->
     group(outputGroupName)->type_name("");
   
+  CLI.add_option("--bed", outBedName,
+    "Output calls in bed format to this file.")->
+    group(outputGroupName)->
+    type_name("FILE");
+
   //
   // Post-parsing sanity checks
   //
@@ -2452,6 +2457,8 @@ int hmcnc(Parameters& params) {
         }
 
         double pCN=0, pCN2=0;
+        double hetC=0, homC=0;
+
         assert(snvEnd <= snvs[c].size());
         for (int cni=snvStart; cni < snvEnd; cni++ ) {
           int ref, alt;
@@ -2470,6 +2477,13 @@ int hmcnc(Parameters& params) {
           }
           pCN += binoP[curCN-1][totCov][alt];
           pCN2 += binoP[1][totCov][alt];
+
+          double ratio = (double)(ref/totCov);
+          //CN is Hom
+          if ( ratio <= 0.55){homC+=1;}
+          //CN is het
+          else if (ratio >= 0.61 and ratio <= 0.71 ){hetC+=1;}
+
         }
         copyIntervals[c][i].altInfo += ":BN";
         stringstream strm;
@@ -2479,6 +2493,23 @@ int hmcnc(Parameters& params) {
           copyIntervals[c][i].filter = "FAIL";
 
         }
+
+        double lrt = hetC/(homC+1.0);    
+        if (curCN==3 ){
+
+          if( lrt >= MIN_LR  ){
+            copyIntervals[c][i].filter = "PASS";          
+          }
+          else{
+            copyIntervals[c][i].filter = "FAIL";
+          } 
+
+          copyIntervals[c][i].altInfo += ":LR";
+          stringstream storm;
+          storm << lrt;
+          copyIntervals[c][i].altSample += ":" + storm.str();
+        }
+
         if (averageReadLength > 0 and copyIntervals[c][i].end-copyIntervals[c][i].start *2 < averageReadLength) {
           copyIntervals[c][i].filter = "FAIL";
         }
@@ -2514,7 +2545,13 @@ int hmcnc(Parameters& params) {
   else {
     outPtr = &cout;
   }
+  
   WriteVCF(*outPtr, params.referenceName, params.sampleName, contigNames, contigLengths, copyIntervals, writeFail);
+
+  if (params.outBedName != "") {
+      WriteBed( copyIntervals, params.outBedName, contigNames);
+    }
+
 
   return 0;
 }
