@@ -827,7 +827,7 @@ void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedInterv
   }
 }
 
-void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & copyIntervals)
+void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & copyIntervals, double mean)
 {
  
   int i = 0, j = 0;
@@ -855,13 +855,18 @@ void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & cop
         copyIntervals[j].start = mergedIntervals[i].start;
         copyIntervals[j].end = mergedIntervals[i].end;
         copyIntervals[j].altInfo += ":DF";
-        copyIntervals[j].altSample += ":1" ;
-        
+        copyIntervals[j].altSample += ":1" ;        
 
-
-
+        if ( ((double) copyIntervals[j].averageCoverage) > (mean*0.25) )
+        {
+          copyIntervals[j].copyNumber = 1;
+        }
+        else{
+          copyIntervals[j].copyNumber = 0;
+        }
         
         i++;j++;
+      
       }
       else if (mergedIntervals[i].end < copyIntervals[j].end)
       {
@@ -2494,7 +2499,7 @@ int hmcnc(Parameters& params) {
 
     mergeIntervals(delT[c], MdelT[c], contigNames[c] );
 
-    intersectDelCall(MdelT[c], copyIntervals[c] );
+    intersectDelCall(MdelT[c], copyIntervals[c], mean );
 
 
   }
