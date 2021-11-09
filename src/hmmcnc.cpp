@@ -38,6 +38,9 @@ using std::string;
 using std::log;
 using namespace std;
 
+const int MIN_ECLIP=0;
+const int MIN_FCLIP=0;
+const int MIN_SV_LENGTH=1000;
 const double MIN_LR=2;
 const int MIN_DEL_LENGTH=5000;
 const int MIN_MAPQ=10;
@@ -2457,7 +2460,6 @@ int hmcnc(Parameters& params) {
         }
 
         double pCN=0, pCN2=0;
-        double hetC=0, homC=0;
 
         assert(snvEnd <= snvs[c].size());
         for (int cni=snvStart; cni < snvEnd; cni++ ) {
@@ -2478,11 +2480,6 @@ int hmcnc(Parameters& params) {
           pCN += binoP[curCN-1][totCov][alt];
           pCN2 += binoP[1][totCov][alt];
 
-          double ratio = (double)(ref/totCov);
-          //CN is Hom
-          if ( ratio <= 0.55){homC+=1;}
-          //CN is het
-          else if (ratio >= 0.61 and ratio <= 0.71 ){hetC+=1;}
 
         }
         copyIntervals[c][i].altInfo += ":BN";
@@ -2494,31 +2491,17 @@ int hmcnc(Parameters& params) {
 
         }
 
-        double lrt = hetC/(homC+1.0);    
-        if (curCN==3 ){
 
-          if( lrt >= MIN_LR  ){
-            copyIntervals[c][i].filter = "PASS";          
-          }
-          else{
-            copyIntervals[c][i].filter = "FAIL";
-          } 
-
-          copyIntervals[c][i].altInfo += ":LR";
-          stringstream storm;
-          storm << lrt;
-          copyIntervals[c][i].altSample += ":" + storm.str();
-        }
 
         if (averageReadLength > 0 and copyIntervals[c][i].end-copyIntervals[c][i].start *2 < averageReadLength) {
           copyIntervals[c][i].filter = "FAIL";
         }
 
       	// Give it a chance to recover with clipping
-      	if (copyIntervals[c][i].nFrontClip > 0 or copyIntervals[c][i].nEndClip > 0) {
+      	if (copyIntervals[c][i].nFrontClip > MIN_FCLIP or copyIntervals[c][i].nEndClip > MIN_ECLIP) {
       	  copyIntervals[c][i].filter = "PASS";
       	}
-      	if (copyIntervals[c][i].end - copyIntervals[c][i].start < 1000) {
+      	if (copyIntervals[c][i].end - copyIntervals[c][i].start < MIN_SV_LENGTH) {
       	  copyIntervals[c][i].filter = "FAIL";
       	}
 	      snvStart=snvEnd;
