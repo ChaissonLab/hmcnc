@@ -362,7 +362,7 @@ void WriteVCF(std::ostream &out,
 	      const std::vector<std::vector<Interval> > &intervals,
 	      bool writeFail=false) {
   out << "##fileformat=VCFv4.1" << '\n'
-      << "##source=hmmcnc_v" << version << '\n'
+      << "##source=hmcnc_v" << version << '\n'
       << "##reference=" << reference << '\n';
   for (size_t i = 0; i < contigNames.size(); i++) {
     out << "##contig=<ID=" << contigNames[i] << ",length=" << contigLengths[i]
@@ -414,11 +414,11 @@ void WriteVCF(std::ostream &out,
         const int cnLength = intervals[c][i].end - intervals[c][i].start;
 
         out << contigNames[c] << '\t' << vcfStartPos
-            << "\t.\t<CNV>\t<CNV>\t30\t" << intervals[c][i].filter << '\t'
+            << "\t.\tN\t<"<<cntype<<">\t30\t" << intervals[c][i].filter << '\t'
             << "SVTYPE=" << cntype << ";"
             << "END=" << vcfEndPos
             << ";SVLEN=" << cnLength
-	          << ";REGION="<< contigNames[c] << ":" << vcfStartPos << "-" << vcfEndPos
+	          << ";REGION="<< contigNames[c] << "_" << vcfStartPos << "-" << vcfEndPos
             << ";IMPRECISE\t"
             << "CN:PP:DP"
             << intervals[c][i].altInfo << "\t"
