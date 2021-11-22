@@ -271,7 +271,11 @@ public:
   vector<vector<double>> *transP, *emisP, *expTransP, *expEmisP;
   vector<double> *startP;
   vector<vector<Interval>> *copyIntervals;
+
+  vector<vector<Interval>> *mergedNaiveIntervals;
+  vector<vector<Interval>> *NaiveIntervals;
   vector<vector<Interval>> *delT;
+
   int maxCov, maxState;
   bool exit;
   double mean;
@@ -830,6 +834,55 @@ void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedInterv
   }
 }
 
+void mergeNaiveIntervals(vector<Interval> & intervals, vector<Interval> &mergedIntervals, string contig) {
+  
+  //std::sort(intervals.begin(), intervals.end() , compareInterval);
+  const int n = intervals.size();
+  for (int i = 0; i < n - 1; i++) {
+ 
+    if ( ((intervals[i].start >= intervals[i + 1].start && intervals[i].start <= intervals[i + 1].end) || (intervals[i].end>= intervals[i + 1].start && intervals[i].end<= intervals[i + 1].end)) && intervals[i].copyNumber == intervals[i+1].copyNumber ) { 
+      intervals[i + 1].start = std::min(intervals[i].start, intervals[i + 1].start);
+      intervals[i + 1].end= std::max(intervals[i].end, intervals[i + 1].end);
+      // Remove previous interval
+      intervals[i].start = -1;
+      intervals[i].end= -1;
+    } 
+  }
+  for (int i = 0; i < n; i++) {
+    if (!(intervals[i].start == -1 && intervals[i].end== -1)) {
+      mergedIntervals.push_back(Interval(intervals[i].start,intervals[i].end , 0, 0.0, 0.0  ));
+    }
+  }
+}
+
+int quant( vector<vector<Interval>> & mergedIntervals ,double q, vector<string> &contigNames ){
+  vector<int> lens;
+  for (size_t c=0 ;c < contigNames.size(); c++) {
+    for (int i=0; i < mergedIntervals[c].size()-1; i++){
+      if (mergedIntervals[c][i].copyNumber==3){
+        lens.push_back(mergedIntervals[c][i].end - mergedIntervals[c][i].start);
+      }
+    }
+  }
+  std:sort(lens.begin(),lens.end());
+  const int idx= (int)(q * lens.size());
+  return (lens[idx]); 
+  //quantile(lens,q);
+}
+
+void NaiveCaller(vector<int> &covBins, vector<Interval> & NaiveIntervals, double mean ){
+
+  const int bins = covBins.size();
+  NaiveIntervals.resize(bins);
+  const double Hmean = mean/2;
+
+  for (int i=0;i<bins-1;i++){
+    int cn=round(covBins[i]/Hmean);
+    if (cn==0 && (covBins[i] >= Hmean/2) ){cn=1;}
+    NaiveIntervals.push_back( Interval(i*100, (i+1)*100, cn, (float) covBins[i], 0.0));
+  }
+}
+
 void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & copyIntervals, double mean)
 {
  
@@ -885,6 +938,9 @@ void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & cop
   }
 
 }
+
+
+
 
 void UpdateEmisP(vector<vector<double>> &emisP,
                  vector<vector<double>> &expEmisP,
@@ -2132,7 +2188,7 @@ int hmcnc(Parameters& params) {
 
   int curSeq=0;
 
-  /////////////////////////////////////
+  //////////////////////////////////////////////
 
   vector<vector<Interval>> delT;
   delT.resize(contigNames.size());
@@ -2141,12 +2197,24 @@ int hmcnc(Parameters& params) {
   MdelT.resize(contigNames.size());
 
 
-/////////////////////////////////////
   vector<vector<Interval>> copyIntervals;
   copyIntervals.resize(contigNames.size());
+
+
+  vector<vector<Interval>> NaiveIntervals;
+  NaiveIntervals.resize(contigNames.size());
+
+
+  vector<vector<Interval>> mergedNaiveIntervals;
+  mergedNaiveIntervals.resize(contigNames.size());
+
+
+  //////////////////////////////////////////////////
+
   nReads.resize(contigNames.size());
   totalBases.resize(contigNames.size());
   averageCoverage.resize(contigNames.size(), 0);
+
   double pModel=0;
 
   for (int procIndex = 0; procIndex < params.nproc ; procIndex++) {
@@ -2182,6 +2250,8 @@ int hmcnc(Parameters& params) {
     threadInfo[procIndex].emisP = &emisP;
     threadInfo[procIndex].startP = &startP;
     threadInfo[procIndex].copyIntervals = &copyIntervals;
+    threadInfo[procIndex].NaiveIntervals = &NaiveIntervals;
+    threadInfo[procIndex].mergedNaiveIntervals = &mergedNaiveIntervals;
     threadInfo[procIndex].pModel=&pModel;
     threadInfo[procIndex].totalReads = &nReads;
     threadInfo[procIndex].totalBases = &totalBases;
@@ -2273,6 +2343,13 @@ int hmcnc(Parameters& params) {
 
   EstimateCoverage(params.bamFileName, covBins, allContigNames, allContigLengths, params.useChrom, mean, var);
 
+  for (size_t c=0 ;c < contigNames.size(); c++) {
+    NaiveCaller(covBins[c], NaiveIntervals[c], mean );
+    mergeNaiveIntervals(NaiveIntervals[c], mergedNaiveIntervals[c], contigNames[c] );
+  }
+  const int cn3quant = quant(mergedNaiveIntervals, 0.99, contigNames);
+
+
   //
   // Cap coverage where hmm does not bother calculating.
   //
@@ -2333,6 +2410,10 @@ int hmcnc(Parameters& params) {
   //mean no. of bins for cn=3 call
   const int nSNVStates=3;
   const double unif=log(1.0/nStates);
+  
+
+
+
   if (params.paramInFile == "") {
     InitParams(covCovTransP, covSnvTransP, snvSnvTransP,
 	       nStates, nSNVStates, log(1-exp(small)), log(exp(small)/(nStates-1)),
@@ -2347,7 +2428,8 @@ int hmcnc(Parameters& params) {
     double prevPX=0;
     assert(!emisP.empty());
     vector<vector<double> > prevTransP, prevEmisP;
-    for (int i=0; i < 4; i++) {
+    for (int i=0; i < 4; i++) 
+    {
       prevTransP=covCovTransP;
       prevEmisP=emisP;
 
@@ -2415,7 +2497,15 @@ int hmcnc(Parameters& params) {
         string outName = params.paramOutFile + "." + s;
         WriteParameterFile( outName , nStates, mean, var, maxState, maxCov, startP, covCovTransP, emisP);
       }
+
+    
     }
+
+   // penalizeTransP(covCovTransP, );
+
+    printModel(updateTransP, &cerr);
+    string outName = params.paramOutFile + ".penalized";
+    WriteParameterFile( outName , nStates, mean, var, maxState, maxCov, startP, covCovTransP, emisP);
 
     //
     // Eventually this needs to update for some multi-chrom code.
