@@ -2508,9 +2508,9 @@ int hmcnc(Parameters& params) {
 
    // penalizeTransP(covCovTransP, );
 
-    printModel(updateTransP, &cerr);
-    string outName = params.paramOutFile + ".penalized";
-    WriteParameterFile( outName , nStates, mean, var, maxState, maxCov, startP, covCovTransP, emisP);
+   // printModel(updateTransP, &cerr);
+   // string outName = params.paramOutFile + ".penalized";
+   // WriteParameterFile( outName , nStates, mean, var, maxState, maxCov, startP, covCovTransP, emisP);
 
     //
     // Eventually this needs to update for some multi-chrom code.
