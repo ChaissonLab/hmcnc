@@ -872,7 +872,7 @@ int quant( vector<vector<Interval>> & mergedIntervals ,double q, vector<string> 
 void NaiveCaller(vector<int> &covBins, vector<Interval> & NaiveIntervals, double mean ){
 
   const int bins = covBins.size();
-  NaiveIntervals.resize(bins);
+  //NaiveIntervals.resize(bins);
   const double Hmean = mean/2;
 
   for (int i=0;i<bins-1;i++){
@@ -1648,7 +1648,8 @@ int EstimateCoverage(const string &bamFileName,
                      const vector<int> &lengths,
                      string &useChrom,
                      double &mean,
-                     double &var) {
+                     double &var) 
+{
   size_t useChromIndex=0;
   if (useChrom == "") {
     int maxLen=0;
