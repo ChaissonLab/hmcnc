@@ -41,7 +41,6 @@ using namespace std;
 const int MIN_ECLIP=0;
 const int MIN_FCLIP=0;
 const int MIN_SV_LENGTH=1000;
-const double MIN_LR=2;
 const int MIN_DEL_LENGTH=5000;
 const int MIN_MAPQ=10;
 const int BIN_LENGTH=100;
@@ -879,7 +878,7 @@ void NaiveCaller(vector<int> &covBins, vector<Interval> & NaiveIntervals, double
   for (int i=0;i<bins-1;i++){
     int cn=round(covBins[i]/Hmean);
     if (cn==0 && (covBins[i] >= Hmean/2) ){cn=1;}
-    NaiveIntervals.push_back( Interval(i*100, (i+1)*100, cn, (float) covBins[i], 0.0));
+    NaiveIntervals.push_back( Interval(i*BIN_LENGTH, (i+1)*BIN_LENGTH, cn, (float) covBins[i], 0.0));
   }
 }
 
@@ -1841,6 +1840,8 @@ void InitParams(vector<vector<double>> &covCovTransP,
                 vector<vector<double>> &emisP,
                 int model, int maxCov, double mean, double var,
                 vector<vector<vector<double>>> &binoP) {
+  
+
   covCovTransP.resize(nCovStates);
   for (int i=0;i<nCovStates;i++) {
     covCovTransP[i].resize(nCovStates);
@@ -1853,6 +1854,9 @@ void InitParams(vector<vector<double>> &covCovTransP,
       }
     }
   }
+
+
+
   const double snvOffDiag=(1-diag)/2;
   covSnvTransP.resize(nCovStates);
   for (int i=0; i < nCovStates; i++) {
@@ -2393,6 +2397,7 @@ int hmcnc(Parameters& params) {
 
   // trans prob, scale 3->2 by overlap of pdf.
 
+  const double leps = log(1e-90);
   const poisson distribution1(3*mean/2);
   const double result3=pdf(distribution1, 3*mean/2);
 
@@ -2400,23 +2405,23 @@ int hmcnc(Parameters& params) {
   const double result2=pdf(distribution2, 3*mean/2);
 
   const double epsi23 = result2/result3;
+  const int scaler = (int) cn3quant/100;
+  //99th percentile no. of bins for cn=3 call
 
-  //*300
 
-  //no epsi
-  const double small=-30;
-  //  double beta =  small + ( scale * log(epsi23))  ;
-  const double beta=small;
-  //mean no. of bins for cn=3 call
+  const double beta = log(nStates-1) + leps + (scaler * log(epsi23));
+
+
+
+
   const int nSNVStates=3;
   const double unif=log(1.0/nStates);
-  
 
 
 
   if (params.paramInFile == "") {
     InitParams(covCovTransP, covSnvTransP, snvSnvTransP,
-	       nStates, nSNVStates, log(1-exp(small)), log(exp(small)/(nStates-1)),
+	       nStates, nSNVStates, log(1-exp(beta)), log(exp(beta)/(nStates-1)),
 	       emisP, params.model, maxCov, mean, var, binoP);
     printModel(covCovTransP, &cerr);
     //    printEmissions(emisP);
