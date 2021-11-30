@@ -849,7 +849,7 @@ void mergeNaiveIntervals(vector<Interval> & intervals, vector<Interval> &mergedI
   }
   for (int i = 0; i < n; i++) {
     if (!(intervals[i].start == -1 && intervals[i].end== -1)) {
-      mergedIntervals.push_back(Interval(intervals[i].start,intervals[i].end , 0, 0.0, 0.0  ));
+      mergedIntervals.push_back(Interval(intervals[i].start,intervals[i].end , intervals[i].copyNumber, 0.0, 0.0  ));
     }
   }
 }
@@ -857,7 +857,7 @@ void mergeNaiveIntervals(vector<Interval> & intervals, vector<Interval> &mergedI
 int quant( vector<vector<Interval>> & mergedIntervals ,double q, vector<string> &contigNames ){
   vector<int> lens;
   for (size_t c=0 ;c < contigNames.size(); c++) {
-    for (int i=0; i < mergedIntervals[c].size()-1; i++){
+    for (int i=0; i < mergedIntervals[c].size(); i++){
       if (mergedIntervals[c][i].copyNumber==3){
         lens.push_back(mergedIntervals[c][i].end - mergedIntervals[c][i].start);
       }
@@ -865,6 +865,7 @@ int quant( vector<vector<Interval>> & mergedIntervals ,double q, vector<string> 
   }
   std:sort(lens.begin(),lens.end());
   const int idx= (int)(q * lens.size());
+  cerr<<"99th percentile CN=3 length: "<<lens[idx]<<"\n";
   return (lens[idx]); 
   //quantile(lens,q);
 }
@@ -872,10 +873,9 @@ int quant( vector<vector<Interval>> & mergedIntervals ,double q, vector<string> 
 void NaiveCaller(vector<int> &covBins, vector<Interval> & NaiveIntervals, double mean ){
 
   const int bins = covBins.size();
-  //NaiveIntervals.resize(bins);
   const double Hmean = mean/2;
 
-  for (int i=0;i<bins-1;i++){
+  for (int i=0;i<bins;i++){
     int cn=round(covBins[i]/Hmean);
     if (cn==0 && (covBins[i] >= Hmean/2) ){cn=1;}
     NaiveIntervals.push_back( Interval(i*BIN_LENGTH, (i+1)*BIN_LENGTH, cn, (float) covBins[i], 0.0));
@@ -1444,7 +1444,7 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
 			       f, b,
 			       (*threadInfo->copyIntervals)[curSeq]);
     cerr << "Stored " << (*threadInfo->copyIntervals)[curSeq].size()
-         << " copy intervals for " << curSeq << endl;
+         << " copy intervals for " << (*threadInfo->contigNames)[curSeq] << endl;
   }
 }
 
@@ -2398,22 +2398,37 @@ int hmcnc(Parameters& params) {
 
   // trans prob, scale 3->2 by overlap of pdf.
 
-  const double leps = log(1e-90);
-  const poisson distribution1(3*mean/2);
-  const double result3=pdf(distribution1, 3*mean/2);
-
   const poisson distribution2(2*mean/2);
-  const double result2=pdf(distribution2, 3*mean/2);
+  const double result32=pdf(distribution2, 3*mean/2);
+  const double result12=pdf(distribution2, mean/2);
 
-  const double epsi23 = result2/result3;
-  const int scaler = (int) cn3quant/100;
+
+  const poisson distribution3(3*mean/2);
+  const poisson distribution1(mean/2);
+
+  const double result33=pdf(distribution3, 3*mean/2);
+  const double result11=pdf(distribution1, mean/2);
+
+
+
+  const double epsi23 = result32/result33;
+  const double epsi12 = result12/result11;
+
+  const double scaler = cn3quant/100;
   //99th percentile no. of bins for cn=3 call
 
 
-  const double beta = log(nStates-1) + leps + (scaler * log(epsi23));
+  const double small=-30;
+
+  const double eps = log(10e+100);
 
 
+  const double beta = eps + (scaler * log(epsi23));  //log(nStates-1)
 
+
+  std::cerr<<"lepsi: "<<eps<<" epsi23: "<<epsi23<<" epsi12: "<<epsi12<<" scaler: "<<scaler<<std::endl;
+  std::cerr<<"small: "<<small<<" log(1-exp(small)): "<<log(1-exp(small))<<std::endl;
+  std::cerr<<"beta: "<<beta<<" log(1-exp(beta)) : "<<log(1-exp(beta))<<std::endl;
 
   const int nSNVStates=3;
   const double unif=log(1.0/nStates);
@@ -2427,7 +2442,8 @@ int hmcnc(Parameters& params) {
     printModel(covCovTransP, &cerr);
     //    printEmissions(emisP);
 
-    //
+    //log(1-exp(small)), log(exp(small)/(nStates-1)),
+
     // Baum-Welch training.
     //
 
