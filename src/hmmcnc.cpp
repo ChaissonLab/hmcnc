@@ -1837,22 +1837,50 @@ void InitParams(vector<vector<double>> &covCovTransP,
                 vector<vector<double>> &covSnvTransP,
                 vector<vector<double>> &snvSnvTransP,
                 int nCovStates, int nSNVStates,
-                double diag, double offDiag,
+                double diag, double offDiag, 
+                double beta, double epsi12,
                 vector<vector<double>> &emisP,
                 int model, int maxCov, double mean, double var,
                 vector<vector<vector<double>>> &binoP) {
   
-
   covCovTransP.resize(nCovStates);
+  const double offDiag1 = offDiag + log(epsi12);
+  const double Diag2 = log(  1 - (exp(beta) + exp(offDiag1) + (  exp(offDiag)   * (nCovStates-3))) );
+  const double Diag = log(  1 - (exp(beta) + (  exp(offDiag)   * (nCovStates-2)) ));
+
   for (int i=0;i<nCovStates;i++) {
     covCovTransP[i].resize(nCovStates);
     for (int j=0;j<nCovStates;j++) {
-      if(i==j) {
-        covCovTransP[i][j]  = diag; //log(1 - std::exp(beta) );
+
+      if(i==2){//leaving normal state
+        if(j==1){
+          covCovTransP[i][j]=offDiag1;
+        }
+        else if(j==3){
+          covCovTransP[i][j]=beta;
+        }
+        else if (j!=2){
+          covCovTransP[i][j]=offDiag;
+
+        }
+        else{
+          covCovTransP[i][j]=Diag2;
+        }
       }
-      else {
-        covCovTransP[i][j] = offDiag;
+      else{
+        if(j==3){
+          covCovTransP[i][j]=beta;          
+        }
+        else if(i!=j){
+          covCovTransP[i][j]=offDiag;          
+        }
+        else{
+          covCovTransP[i][j]=Diag;          
+
+        }
+
       }
+
     }
   }
 
@@ -2438,6 +2466,7 @@ int hmcnc(Parameters& params) {
   if (params.paramInFile == "") {
     InitParams(covCovTransP, covSnvTransP, snvSnvTransP,
 	       nStates, nSNVStates, log(1-exp(beta)), log(exp(beta)/(nStates-1)),
+         beta, epsi12,
 	       emisP, params.model, maxCov, mean, var, binoP);
     printModel(covCovTransP, &cerr);
     //    printEmissions(emisP);
