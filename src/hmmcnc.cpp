@@ -189,6 +189,7 @@ const double epsilon = 0.00000000001;
 
 double PairSumOfLogP(double a, double b) {
   double res = b;
+  assert(res<0);
   if (a != 0) {
     const double m = max(a, b);
 
@@ -1844,7 +1845,7 @@ void InitParams(vector<vector<double>> &covCovTransP,
                 vector<vector<vector<double>>> &binoP) {
   
   covCovTransP.resize(nCovStates);
-  const double offDiag1 = offDiag + log(epsi12);
+  const double offDiag1 = offDiag + epsi12;
   const double Diag2 = log(  1 - (exp(beta) + exp(offDiag1) + (  exp(offDiag)   * (nCovStates-3))) );
   const double Diag = log(  1 - (exp(beta) + (  exp(offDiag)   * (nCovStates-2)) ));
 
@@ -2381,7 +2382,33 @@ int hmcnc(Parameters& params) {
     mergeNaiveIntervals(NaiveIntervals[c], mergedNaiveIntervals[c], contigNames[c] );
   }
   const int cn3quant = quant(mergedNaiveIntervals, 0.99, contigNames);
+  double epsi21_emp=0;
+  double epsi23_emp=0;
+  double epsi3_emp=0;
+  double epsi1_emp=0;
+  const double zer0=0;
+  
+  for (size_t c=0 ;c < contigNames.size(); c++) {
+    std::cerr<<contigNames[c]<<" first "<<LgNegBinom( 2 , (int) NaiveIntervals[c][0].averageCoverage, (float) (mean/2), (float)(var/2) )<<"\t"<< NaiveIntervals[c][0].averageCoverage<<std::endl;
+    for (size_t i =0; i < NaiveIntervals.size(); i++){
+      if(NaiveIntervals[c][i].copyNumber==3){
+        assert(NaiveIntervals[c][i].averageCoverage > (float)(mean) );
+        epsi23_emp = PairSumOfLogP(epsi23_emp, LgNegBinom( 2 , (int) NaiveIntervals[c][i].averageCoverage, (float) (mean/2), (float)(var/2) ) );
+        epsi3_emp = PairSumOfLogP(epsi3_emp, LgNegBinom( 3 , (int) NaiveIntervals[c][i].averageCoverage, (float) (mean/2), (float)(var/2) ) );
 
+      }
+      else if(NaiveIntervals[c][i].copyNumber==1){
+        assert(NaiveIntervals[c][i].averageCoverage > 0);
+        epsi21_emp = PairSumOfLogP(epsi21_emp, LgNegBinom( 2 , (int) NaiveIntervals[c][i].averageCoverage, (float) (mean/2), (float)(var/2) ) );
+        epsi1_emp = PairSumOfLogP(epsi1_emp, LgNegBinom( 1 , (int) NaiveIntervals[c][i].averageCoverage, (float) (mean/2), (float)(var/2) ) );
+
+      }
+    }
+  
+  }
+  const double lepsi23_emp = epsi3_emp - epsi23_emp;
+
+  const double lepsi21_emp = epsi1_emp - epsi21_emp;
 
   //
   // Cap coverage where hmm does not bother calculating.
@@ -2439,24 +2466,30 @@ int hmcnc(Parameters& params) {
 
 
 
-  const double epsi23 = result32/result33;
-  const double epsi12 = result12/result11;
+  const double epsi23 = log(result32)-log(result33);
+  const double epsi12 = log(result12)-log(result11);
 
   const double scaler = cn3quant/100;
   //99th percentile no. of bins for cn=3 call
 
+  const double lepsi23_nb = LgNegBinom(3, (int) mean , (float) (mean/2), (float)(var/2)  ) - LgNegBinom(2, (int) mean , (float) (mean/2), (float)(var/2)  );
+  const double lepsi21_nb = LgNegBinom(1, (int) mean , (float) (mean/2), (float)(var/2)  ) - LgNegBinom(2, (int) mean , (float) (mean/2), (float)(var/2)  );
+
 
   const double small=-30;
 
-  const double eps = log(10e+100);
+  const double eps = log(1);
 
 
-  const double beta = eps + (scaler * log(epsi23));  //log(nStates-1)
+  const double beta = eps + (scaler * epsi23);  //log(nStates-1)
+  const double beta_nb = eps + (scaler * lepsi23_nb);  //log(nStates-1)
+  const double beta_emp = eps + (scaler * lepsi23_emp);  //log(nStates-1)
 
-
-  std::cerr<<"lepsi: "<<eps<<" epsi23: "<<epsi23<<" epsi12: "<<epsi12<<" scaler: "<<scaler<<std::endl;
+  std::cerr<<"empirical lepsi23: "<<lepsi23_emp<<" empirical lepsi21: "<<lepsi21_emp<<std::endl;
+  std::cerr<<"negBin lepsi23: "<<lepsi23_nb<<" negBin lepsi21: "<<lepsi21_nb<<std::endl;
+  std::cerr<<"poisson lepsi23: "<<epsi23<<" poisson lepsi21: "<<epsi12<<"\nscaler: "<<scaler<<std::endl;
   std::cerr<<"small: "<<small<<" log(1-exp(small)): "<<log(1-exp(small))<<std::endl;
-  std::cerr<<"beta: "<<beta<<" log(1-exp(beta)) : "<<log(1-exp(beta))<<std::endl;
+  std::cerr<<"beta_p: "<<beta<<" beta_nb: "<<beta_nb<<" beta_emp: "<<beta_emp<<std::endl;
 
   const int nSNVStates=3;
   const double unif=log(1.0/nStates);
@@ -2465,13 +2498,12 @@ int hmcnc(Parameters& params) {
 
   if (params.paramInFile == "") {
     InitParams(covCovTransP, covSnvTransP, snvSnvTransP,
-	       nStates, nSNVStates, log(1-exp(beta)), log(exp(beta)/(nStates-1)),
-         beta, epsi12,
+	       nStates, nSNVStates, log(1-exp(small)), log(exp(small)/(nStates-1)),
+         beta_nb, lepsi21_nb,
 	       emisP, params.model, maxCov, mean, var, binoP);
     printModel(covCovTransP, &cerr);
     //    printEmissions(emisP);
 
-    //log(1-exp(small)), log(exp(small)/(nStates-1)),
 
     // Baum-Welch training.
     //
