@@ -834,7 +834,7 @@ void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedInterv
   }
 }
 
-void mergeNaiveIntervals(vector<Interval> intervals, vector<Interval> &mergedIntervals, string contig) {
+void mergeNaiveIntervals(vector<Interval> &intervals, vector<Interval> &mergedIntervals, string contig) {
   
   //std::sort(intervals.begin(), intervals.end() , compareInterval);
   const int n = intervals.size();
