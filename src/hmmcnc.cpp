@@ -811,13 +811,14 @@ void StorePosteriorMaxIntervals(const vector<int> &cov,
 
 bool compareInterval(Interval i1, Interval i2) {return (i1.start < i2.start);} 
 
+bool compareIntervalLength(Interval i1, Interval i2) {return (i1.end - i1.start) < (i2.end - i2.start);} 
+
 void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedIntervals, string contig) {
   
   std::sort(intervals.begin(), intervals.end() , compareInterval);
   const int n = intervals.size();
   for (int i = 0; i < n - 1; i++) {
     //debug
-    //std::cout<<contig<<'\t'<<intervals[i].start<<'\t'<<intervals[i].end<<'\n';
 
     if ((intervals[i].start >= intervals[i + 1].start && intervals[i].start <= intervals[i + 1].end) || (intervals[i].end>= intervals[i + 1].start && intervals[i].end<= intervals[i + 1].end)) { 
       intervals[i + 1].start = std::min(intervals[i].start, intervals[i + 1].start);
@@ -867,22 +868,22 @@ void quant( vector<vector<Interval>> & mergedIntervals ,double q, vector<string>
         contigNames[c] == "M") { continue; }
     for (int i=0; i < mergedIntervals[c].size(); i++){
       if (mergedIntervals[c][i].copyNumber==3){
-        lens3.push_back(Interval(mergedIntervals[c][i].end - mergedIntervals[c][i].start, mergedIntervals[c][i].end, 3, (float)c, 0.0 ));
+        lens3.push_back(Interval( mergedIntervals[c][i].start, mergedIntervals[c][i].end, 3, (float)c, 0.0 ));
       }
       else if(mergedIntervals[c][i].copyNumber==1){
-        lens1.push_back(Interval(mergedIntervals[c][i].end - mergedIntervals[c][i].start, mergedIntervals[c][i].end, 1, (float)c, 0.0 ));
+        lens1.push_back(Interval( mergedIntervals[c][i].start, mergedIntervals[c][i].end, 1, (float)c, 0.0 ));
       }
     }
   }
-  std::sort(lens1.begin(),lens1.end(),compareInterval);
-  std::sort(lens3.begin(),lens3.end(),compareInterval);
+  std::sort(lens1.begin(),lens1.end(),compareIntervalLength);
+  std::sort(lens3.begin(),lens3.end(),compareIntervalLength);
   const int idx1= (int)(q * lens1.size());
   const int idx3= (int)(q * lens3.size());
   stats.push_back(lens3[idx3]);
   stats.push_back(lens1[idx1]);
 
-  cerr<<"99th percentile CN=3 length: "<<stats[0].start<<"\n";
-  cerr<<"99th percentile CN=1 length: "<<stats[1].start<<"\n";
+  cerr<<"99th percentile CN=3 length: "<<stats[0].end-stats[0].start<<"\n";
+  cerr<<"99th percentile CN=1 length: "<<stats[1].end-stats[1].start<<"\n";
 
 }
 
@@ -2180,15 +2181,18 @@ int hmcnc(Parameters& params) {
   vector<double> averageCoverage;
 
   if (params.covBedInFileName != "") {
+    if (params.snvInFileName == ""){
+      cerr << "ERROR: SNV file (-s) must be specified if precomputed bins (-b) are used." << '\n';
+      exit(0);
+    }
+    else{
     ReadCoverage(params.covBedInFileName, contigNames, covBins);
+    ReadSNVs(params.snvInFileName, contigNames, snvs);
+    }
   }
 
   if (params.clipInFileName != "") {
     ReadCoverage(params.clipInFileName, contigNames, clipBins);
-  }
-
-  if (params.snvInFileName != "") {
-    ReadSNVs(params.snvInFileName, contigNames, snvs);
   }
 
   if (params.paramInFile != "") {
@@ -2402,12 +2406,11 @@ int hmcnc(Parameters& params) {
   double epsi3_emp=0;
   double epsi1_emp=0;
   
-  //leveraged interval struct to store length, contig and end pos
-  const int cn3quant = (int) stats[0].start/BIN_LENGTH;
+  const int cn3quant = (int) (stats[0].end-stats[0].start)/BIN_LENGTH;
   const size_t contigg3 = (size_t) stats[0].averageCoverage;
   const int end3 = (int) stats[0].end/BIN_LENGTH;
 
-  const int cn1quant = (int) stats[1].start/BIN_LENGTH;
+  const int cn1quant = (int) (stats[1].end-stats[1].start)/BIN_LENGTH;
   const size_t contigg1 = (size_t) stats[1].averageCoverage;
   const int end1 = (int) stats[1].end/BIN_LENGTH;
 
@@ -2415,9 +2418,9 @@ int hmcnc(Parameters& params) {
   std::cerr<<contigNames[contigg3]<<"\t"<<end3-cn3quant<<"\t"<<end3<<std::endl;
   std::cerr<<contigNames[contigg1]<<"\t"<<end1-cn1quant<<"\t"<<end1<<std::endl;
 
-//
+
   for (int i=end3-1; i>=end3-cn3quant;i-- ){
-    //assert(UnmergedNaiveIntervals[c][i].averageCoverage > (float)(mean) );
+    assert(UnmergedNaiveIntervals[c][i].averageCoverage > (float)(mean) );
     epsi23_emp += LgNegBinom( 2 , (int) covBins[contigg3][i], (float) (mean/2), (float)(var/2) );
     epsi3_emp += LgNegBinom( 3 , (int) covBins[contigg3][i], (float) (mean/2), (float)(var/2) );
 
@@ -2425,7 +2428,7 @@ int hmcnc(Parameters& params) {
 
 
   for (int i=end1-1; i>=end1-cn1quant;i-- ){
-       // assert(UnmergedNaiveIntervals[c][i].averageCoverage > 0);
+        assert(UnmergedNaiveIntervals[c][i].averageCoverage > 0);
         epsi21_emp +=  LgNegBinom( 2 , (int) covBins[contigg1][i], (float) (mean/2), (float)(var/2) ) ;
         epsi1_emp +=  LgNegBinom( 1 , (int) covBins[contigg1][i], (float) (mean/2), (float)(var/2) ) ;
 
@@ -2506,14 +2509,11 @@ int hmcnc(Parameters& params) {
   const double result32=pdf(distribution2, 3*mean/2);
   const double result12=pdf(distribution2, mean/2);
 
-
   const poisson distribution3(3*mean/2);
   const poisson distribution1(mean/2);
 
   const double result33=pdf(distribution3, 3*mean/2);
   const double result11=pdf(distribution1, mean/2);
-
-
 
   const double epsi23 = log(result32)-log(result33);
   const double epsi12 = log(result12)-log(result11);
@@ -2533,19 +2533,15 @@ int hmcnc(Parameters& params) {
 
   const double beta = eps + (scaler3 * epsi23);  //log(nStates-1)
   const double beta_nb = eps + (scaler3 * lepsi23_nb);  //log(nStates-1)
-  const double beta_emp = eps + (scaler3 * lepsi23_emp);  //log(nStates-1)
-
 
   const double beta1 = eps + (scaler1 * epsi12);  //log(nStates-1)
   const double beta_nb1 = eps + (scaler1 * lepsi21_nb);  //log(nStates-1)
-  const double beta_emp1 = eps + (scaler1 * lepsi21_emp);  //log(nStates-1)
 
   std::cerr<<"empirical lepsi23: "<<lepsi23_emp<<" empirical lepsi21: "<<lepsi21_emp<<std::endl;
   std::cerr<<"negBin lepsi23: "<<lepsi23_nb<<" negBin lepsi21: "<<lepsi21_nb<<std::endl;
   std::cerr<<"poisson lepsi23: "<<epsi23<<" poisson lepsi21: "<<epsi12<<"\nscaler3: "<<scaler3<<"\tscaler1: "<<scaler1<<std::endl;
-  std::cerr<<"small: "<<small<<" log(1-exp(small)): "<<log(1-exp(small))<<std::endl;
-  std::cerr<<"beta_p3: "<<beta<<" beta_nb3: "<<beta_nb<<" beta_emp3: "<<beta_emp<<std::endl;
-  std::cerr<<"beta_p1: "<<beta1<<" beta_nb1: "<<beta_nb1<<" beta_emp1: "<<beta_emp1<<std::endl;
+  std::cerr<<"beta_p3: "<<beta<<" beta_nb3: "<<beta_nb<<std::endl;
+  std::cerr<<"beta_p1: "<<beta1<<" beta_nb1: "<<beta_nb1<<std::endl;
 
   const int nSNVStates=3;
   const double unif=log(1.0/nStates);
@@ -2640,11 +2636,7 @@ int hmcnc(Parameters& params) {
     
     }
 
-   // penalizeTransP(covCovTransP, );
 
-   // printModel(updateTransP, &cerr);
-   // string outName = params.paramOutFile + ".penalized";
-   // WriteParameterFile( outName , nStates, mean, var, maxState, maxCov, startP, covCovTransP, emisP);
 
     //
     // Eventually this needs to update for some multi-chrom code.
