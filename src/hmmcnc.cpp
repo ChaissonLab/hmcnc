@@ -2420,7 +2420,7 @@ int hmcnc(Parameters& params) {
 
 
   for (int i=end3-1; i>=end3-cn3quant;i-- ){
-    assert(UnmergedNaiveIntervals[c][i].averageCoverage > (float)(mean) );
+    assert(UnmergedNaiveIntervals[contigg3][i].averageCoverage > (float)(mean) );
     epsi23_emp += LgNegBinom( 2 , (int) covBins[contigg3][i], (float) (mean/2), (float)(var/2) );
     epsi3_emp += LgNegBinom( 3 , (int) covBins[contigg3][i], (float) (mean/2), (float)(var/2) );
 
@@ -2428,7 +2428,7 @@ int hmcnc(Parameters& params) {
 
 
   for (int i=end1-1; i>=end1-cn1quant;i-- ){
-        assert(UnmergedNaiveIntervals[c][i].averageCoverage > 0);
+        assert(UnmergedNaiveIntervals[contigg1][i].averageCoverage > 0);
         epsi21_emp +=  LgNegBinom( 2 , (int) covBins[contigg1][i], (float) (mean/2), (float)(var/2) ) ;
         epsi1_emp +=  LgNegBinom( 1 , (int) covBins[contigg1][i], (float) (mean/2), (float)(var/2) ) ;
 
@@ -2753,7 +2753,10 @@ int hmcnc(Parameters& params) {
   WriteVCF(*outPtr, params.referenceName, params.sampleName, contigNames, contigLengths, copyIntervals, writeFail);
 
   if (params.outBedName != "") {
+      const string naive_out = "naive." + params.outBedName;
       WriteBed( copyIntervals, params.outBedName, contigNames);
+      WriteBed( mergedNaiveIntervals, naive_out, contigNames);
+
     }
 
 
