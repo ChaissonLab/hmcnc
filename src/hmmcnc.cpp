@@ -859,6 +859,12 @@ void quant( vector<vector<Interval>> & mergedIntervals ,double q, vector<string>
   vector<Interval> lens1;
   vector<Interval> lens3;
   for (size_t c=0 ;c < contigNames.size(); c++) {
+    if (contigNames[c] == "chrX" or 
+        contigNames[c] == "X" or
+        contigNames[c] == "chrY" or 
+        contigNames[c] == "Y" or 
+        contigNames[c] == "chrM" or 
+        contigNames[c] == "M") { continue; }
     for (int i=0; i < mergedIntervals[c].size(); i++){
       if (mergedIntervals[c][i].copyNumber==3){
         lens3.push_back(Interval(mergedIntervals[c][i].end - mergedIntervals[c][i].start, mergedIntervals[c][i].end, 3, (float)c, 0.0 ));
