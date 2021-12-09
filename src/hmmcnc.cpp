@@ -1537,8 +1537,8 @@ void ParseChrom(ThreadInfo *threadInfo) {
         }
         endpos=bam_endpos(b.get());
         if ((b->core.flag & BAM_FSUPPLEMENTARY) == 0 && (b->core.flag & BAM_FSECONDARY) == 0) {
-          reads.push_back(std::move(b));
 	  totalBases+=b->core.l_qseq;
+          reads.push_back(std::move(b));
         }
       }
       cerr << "Reading " << (*threadInfo->contigNames)[curSeq] << ", chunk " << chunkNumber << ".\t" << reads.size() << "/" << totalBases << "/" << idxTotalBases << " reads/net/total" << '\n';
