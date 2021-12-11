@@ -326,6 +326,10 @@ double LgNegBinom(int cn, int cov, float Hmean, float Hvar) {
   double result=0;
   float r, p;
 
+
+  if ((Hmean/Hvar)>=0.90){
+    return (LgPrpoiss(cn,cov, (int) Hmean ));
+  }
   if (Hmean == 0 or Hvar == 0) {
     return 0;
   }
@@ -816,8 +820,6 @@ void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedInterv
   std::sort(intervals.begin(), intervals.end() , compareInterval);
   const int n = intervals.size();
   for (int i = 0; i < n - 1; i++) {
-    //debug
-
     if ((intervals[i].start >= intervals[i + 1].start && intervals[i].start <= intervals[i + 1].end) || (intervals[i].end>= intervals[i + 1].start && intervals[i].end<= intervals[i + 1].end)) { 
       intervals[i + 1].start = std::min(intervals[i].start, intervals[i + 1].start);
       intervals[i + 1].end= std::max(intervals[i].end, intervals[i + 1].end);
@@ -2423,9 +2425,13 @@ int hmcnc(Parameters& params) {
 
   EstimateCoverage(params.bamFileName, covBins, allContigNames, allContigLengths, params.useChrom, mean, var);
 
-  for (auto c=0 ;c < contigNames.size(); c++) {
-    
+  if ((mean/var)>=0.90 ){
+    params.model= POIS;
+    MODEL_TYPE model=POIS;
+    std::cerr<<"Mean is approximately equal to variance, Model switched to Poisson."<<std::endl;
   }
+  
+
     
 
   ChromCopyNumber(covBins, mean,chromCopyNumber);
@@ -2439,6 +2445,8 @@ int hmcnc(Parameters& params) {
       cerr << "Not using naive depth on " << contigNames[c] << " copy number " << chromCopyNumber[c] << endl;
     }
   }
+
+
 
   vector<Interval> stats;
   quant(mergedNaiveIntervals, 0.99, contigNames, stats);
@@ -2586,6 +2594,7 @@ int hmcnc(Parameters& params) {
 
   const int nSNVStates=3;
   const double unif=log(1.0/nStates);
+
 
 
 
@@ -2788,7 +2797,7 @@ int hmcnc(Parameters& params) {
 	double intvCoverage = std::accumulate(&origCovBins[c][intvStart], &origCovBins[c][intvEnd], 0);
 	double cnReal = 2*intvCoverage / ((intvEnd-intvStart)*mean);
 	int cn=round(cnReal);
-	cerr << "Prev CN " << copyIntervals[c][i].copyNumber << " CUR: " << cn << endl;
+	//cerr << "Prev CN " << copyIntervals[c][i].copyNumber << " CUR: " << cn << endl;
 	copyIntervals[c][i].copyNumber = cn;
       }
     }
