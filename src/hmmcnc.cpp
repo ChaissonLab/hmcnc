@@ -271,7 +271,7 @@ public:
   vector<vector<double>> *transP, *emisP, *expTransP, *expEmisP;
   vector<double> *startP;
   vector<vector<Interval>> *copyIntervals;
-
+  vector<double> *chromCopyNumber;
   vector<vector<Interval>> *mergedNaiveIntervals;
   vector<vector<Interval>> *UnmergedNaiveIntervals;
   vector<vector<Interval>> *delT;
@@ -283,6 +283,7 @@ public:
   double lepsi;
   double scale;
   double *pModel;
+  string hmmChrom;
   vector<int> *totalReads;
   vector<long> *totalBases;
   vector<double> *averageCoverage;
@@ -325,6 +326,10 @@ double LgNegBinom(int cn, int cov, float Hmean, float Hvar) {
   double result=0;
   float r, p;
 
+
+  if ((Hmean/Hvar)>=0.90){
+    return (LgPrpoiss(cn,cov, (int) Hmean ));
+  }
   if (Hmean == 0 or Hvar == 0) {
     return 0;
   }
@@ -340,15 +345,7 @@ double LgNegBinom(int cn, int cov, float Hmean, float Hvar) {
       result=0;
     }
   }
-  else if (cov >= MAX_CN*Hmean) {//max_obs filtered previously
-    if (cn!= MAX_CN) {
-      result=lepsi;
-    }
-    else {
-      result=0;
-    }
-  }
-  else if(cn==0) {//del_states
+  if (cn==0) {//del_states
     //
     // Use poisson for 0-state assuming it's a random mismap process.
     const poisson distribution(MISMAP_RATE*Hmean);
@@ -587,7 +584,7 @@ double ForwardBackwards(const vector<double> &startP,
       b[i][k] = colSum;
     }
   }
-
+ 
   double finalCol=0;
   for (int j=0; j < nCovStates; j++) {
     finalCol = PairSumOfLogP(finalCol, f[j][totObs]+log(1.0/nCovStates));
@@ -620,11 +617,15 @@ void ApplyPriorToTransP(vector<vector<int> > &f,
     for (int i=0; i < nStates; i++) {
       expCovCovTransP[i][i] += nBins*10;
     }
+    
     //      for (int j=0; j < nStates; j++) {
     //	expCovCovTransP[i][j] += nBins* prior[i][j] * 10;
     //      }
     //    }
   }
+  // Expext roughly this many transitions in a mammalian genome.
+  //  expCovCovTransP[2][1] += 1000;
+  //  expCovCovTransP[2][3] += 100;
 }
 
 double BaumWelchEOnChrom(const vector<double> &startP,
@@ -662,6 +663,7 @@ double BaumWelchEOnChrom(const vector<double> &startP,
   for (size_t ei=0; ei < expEmisP.size(); ei++) {
     fill(expEmisP[ei].begin(), expEmisP[ei].end(), 0);
   }
+
   for (int k=1; k< nObs-1; k++) {
     double colSum=0;
 
@@ -1406,13 +1408,15 @@ int IncrementCounts(bam1_t *b, int contigLength,
 void ThreadedBWE(ThreadInfo *threadInfo) {
   double pChrom;
   while (*(threadInfo->lastSeq) < (*(*threadInfo).contigNames).size()) {
-
+    
     pthread_mutex_lock(threadInfo->semaphore);
 
     const int curSeq = *((*threadInfo).lastSeq);
     *(threadInfo->lastSeq) = *(threadInfo->lastSeq) + 1;
     pthread_mutex_unlock(threadInfo->semaphore);
-    
+    if (threadInfo->hmmChrom != "" and (*(*threadInfo).contigNames)[curSeq] != threadInfo->hmmChrom) {
+      break;
+    }
     if (curSeq >= threadInfo->contigNames->size()) {
       break;
     }
@@ -1442,24 +1446,24 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
     // Update expected transitions
     //
     pthread_mutex_lock(threadInfo->semaphore);
-    for (size_t i=0; i < threadInfo->transP->size(); i++) {
-      for (size_t j=0; j < (*threadInfo->transP)[i].size(); j++) {
-        (*threadInfo->expTransP)[i][j] += expCovCovTransP[i][j];
+    if ((*threadInfo->chromCopyNumber)[curSeq] >= 1.5 and
+	(*threadInfo->chromCopyNumber)[curSeq] < 2.5) {
+      for (size_t i=0; i < threadInfo->transP->size(); i++) {
+	for (size_t j=0; j < (*threadInfo->transP)[i].size(); j++) {
+	  (*threadInfo->expTransP)[i][j] += expCovCovTransP[i][j];
+	}
       }
-    }
-    for (size_t i=0; i < threadInfo->emisP->size(); i++) {
-      for (size_t j=0; j < (*threadInfo->emisP)[i].size(); j++) {
-        (*threadInfo->expEmisP)[i][j] += expEmisP[i][j];
+      for (size_t i=0; i < threadInfo->emisP->size(); i++) {
+	for (size_t j=0; j < (*threadInfo->emisP)[i].size(); j++) {
+	  (*threadInfo->expEmisP)[i][j] += expEmisP[i][j];
+	}
       }
+      *threadInfo->pModel  += pChrom;
     }
-
-    *threadInfo->pModel  += pChrom;
     pthread_mutex_unlock(threadInfo->semaphore);
     StorePosteriorMaxIntervals((*threadInfo->covBins)[curSeq],
 			       f, b,
 			       (*threadInfo->copyIntervals)[curSeq]);
-    cerr << "Stored " << (*threadInfo->copyIntervals)[curSeq].size()
-         << " copy intervals for " << (*threadInfo->contigNames)[curSeq] << endl;
   }
 }
 
@@ -1495,12 +1499,17 @@ void ParseChrom(ThreadInfo *threadInfo) {
     vector<int> nA(contigLength, 0), nC(contigLength, 0), nT(contigLength, 0), nG(contigLength,0), nDel(contigLength, 0);
 
     stringstream regionStrm;
+    string contigName=(*(*threadInfo).contigNames)[curSeq];
     regionStrm << (*(*threadInfo).contigNames)[curSeq];// << ":1-" << contigLength;
 
     const string region=regionStrm.str();
 
     std::unique_ptr<hts_itr_t, HtslibIteratorDeleter> regionIter(
       sam_itr_querys(threadInfo->bamidx.get(), threadInfo->samHeader.get(), region.c_str()));
+
+    int tid = sam_hdr_name2tid(threadInfo->samHeader.get(), contigName.c_str());
+    uint64_t idxTotalBases, idxTotalReads;
+    hts_idx_get_stat(threadInfo->bamidx.get(), tid, &idxTotalBases, &idxTotalReads);
 
     int chromLen;
     char *chromSeq = fai_fetch(threadInfo->fai.get(), region.c_str(), &chromLen);
@@ -1509,7 +1518,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
     vector<std::unique_ptr<bam1_t, BamRecordDeleter>> reads; //(bam_init1());
     long totalSize=0;
     int chunkNumber=0;
-    int totalReads=0;
+    uint64_t totalBases=0;
     int endpos=0;
     int startpos=0;
     while (continueParsing) {
@@ -1530,11 +1539,11 @@ void ParseChrom(ThreadInfo *threadInfo) {
         }
         endpos=bam_endpos(b.get());
         if ((b->core.flag & BAM_FSUPPLEMENTARY) == 0 && (b->core.flag & BAM_FSECONDARY) == 0) {
+	  totalBases+=b->core.l_qseq;
           reads.push_back(std::move(b));
-          ++totalReads;
         }
       }
-      cerr << "Reading " << (*threadInfo->contigNames)[curSeq] << ", chunk " << chunkNumber << ".\t" << reads.size() << "/" << totalReads << " reads/total" << '\n';
+      cerr << "Reading " << (*threadInfo->contigNames)[curSeq] << ", chunk " << chunkNumber << ".\t" << reads.size() << "/" << totalBases << "/" << idxTotalBases << " reads/net/total" << '\n';
       ++chunkNumber;
       pthread_mutex_unlock(threadInfo->semaphore);
 
@@ -1657,6 +1666,23 @@ static int pileup_blank(void *data, bam1_t *b) {
   return 0;
 }
 
+void ChromCopyNumber(const vector<vector<int>> &allCovBins,
+		     double mean,
+		     vector<double> &chromCopy) {
+  chromCopy.resize(allCovBins.size(), 0);
+  for (auto c=0; c < allCovBins.size(); c++) {
+    if (allCovBins[c].size() > 0) {
+      double totChromCov= std::accumulate(allCovBins[c].begin(), allCovBins[c].end(), 0);
+      totChromCov /= allCovBins[c].size();
+      chromCopy[c] = 2*totChromCov/mean;
+    }
+    else {
+      chromCopy[c] = 0;
+    }
+  }
+}
+
+    
 int EstimateCoverage(const string &bamFileName,
                      const vector<vector<int>> &allCovBins,
                      const vector<string> &chroms,
@@ -2140,10 +2166,13 @@ int hmcnc(Parameters& params) {
   // Determine what chroms to operate on.
   //
   ReadFai(faiFileName, allContigNames, allContigLengths);
-  if (params.hmmChrom == "") {
-    contigNames = allContigNames;
-    contigLengths = allContigLengths;
+
+  //  if (params.hmmChrom == "") {
+  contigNames = allContigNames;
+  contigLengths = allContigLengths;
+  /*
   }
+
   else {
     contigNames.push_back(params.hmmChrom);
     for (size_t i=0; i < allContigNames.size(); i++) {
@@ -2157,8 +2186,9 @@ int hmcnc(Parameters& params) {
       exit(1);
     }
   }
+  */
 
-  vector<vector<int>> covBins;
+  vector<vector<int>> covBins, origCovBins;
   vector<vector<int>> clipBins;
   double mean;
   double var;
@@ -2257,6 +2287,8 @@ int hmcnc(Parameters& params) {
   vector<vector<Interval>> mergedNaiveIntervals;
   mergedNaiveIntervals.resize(contigNames.size());
 
+  vector<double> chromCopyNumber;
+  chromCopyNumber.resize(contigNames.size());
 
   //////////////////////////////////////////////////
 
@@ -2293,6 +2325,7 @@ int hmcnc(Parameters& params) {
     threadInfo[procIndex].maxCov = maxCov;
     threadInfo[procIndex].mean = mean;
     threadInfo[procIndex].var = var;
+    threadInfo[procIndex].hmmChrom = params.hmmChrom;
     threadInfo[procIndex].transP = &covCovTransP;
     threadInfo[procIndex].expTransP = &expCovCovTransP;
     threadInfo[procIndex].expEmisP = &expEmisP;
@@ -2305,7 +2338,7 @@ int hmcnc(Parameters& params) {
     threadInfo[procIndex].totalReads = &nReads;
     threadInfo[procIndex].totalBases = &totalBases;
     threadInfo[procIndex].averageCoverage = &averageCoverage;
-
+    threadInfo[procIndex].chromCopyNumber = &chromCopyNumber;
     threadInfo[procIndex].delT = &delT;
   }
 
@@ -2392,10 +2425,28 @@ int hmcnc(Parameters& params) {
 
   EstimateCoverage(params.bamFileName, covBins, allContigNames, allContigLengths, params.useChrom, mean, var);
 
-  for (size_t c=0 ;c < contigNames.size(); c++) {
-    NaiveCaller(covBins[c], UnmergedNaiveIntervals[c], mean );
-    mergeNaiveIntervals(UnmergedNaiveIntervals[c], mergedNaiveIntervals[c], contigNames[c] );
+  if ((mean/var)>=0.90 ){
+    params.model= POIS;
+    MODEL_TYPE model=POIS;
+    std::cerr<<"Mean is approximately equal to variance, Model switched to Poisson."<<std::endl;
   }
+  
+
+    
+
+  ChromCopyNumber(covBins, mean,chromCopyNumber);
+
+  for (auto c=0 ;c < contigNames.size(); c++) {
+    if (chromCopyNumber[c] > 1.5 and chromCopyNumber[c] < 2.5) {
+      NaiveCaller(covBins[c], UnmergedNaiveIntervals[c], mean );
+      mergeNaiveIntervals(UnmergedNaiveIntervals[c], mergedNaiveIntervals[c], contigNames[c] );
+    }
+    else {
+      cerr << "Not using naive depth on " << contigNames[c] << " copy number " << chromCopyNumber[c] << endl;
+    }
+  }
+
+
 
   vector<Interval> stats;
   quant(mergedNaiveIntervals, 0.99, contigNames, stats);
@@ -2464,7 +2515,7 @@ int hmcnc(Parameters& params) {
   // Cap coverage where hmm does not bother calculating.
   //
   maxCov=(int)mean/2*(maxState+1);
-
+  origCovBins=covBins;
   for (size_t c=0; c < covBins.size(); c++) {
     for (size_t b=0; b < covBins[c].size(); b++) {
       covBins[c][b] = min(covBins[c][b], maxCov);
@@ -2543,6 +2594,7 @@ int hmcnc(Parameters& params) {
 
   const int nSNVStates=3;
   const double unif=log(1.0/nStates);
+
 
 
 
@@ -2707,10 +2759,7 @@ int hmcnc(Parameters& params) {
         copyIntervals[c][i].altSample += ":" + strm.str();
         if (pCN < pCN2) {
           copyIntervals[c][i].filter = "FAIL";
-
         }
-
-
 
         if (averageReadLength > 0 and copyIntervals[c][i].end-copyIntervals[c][i].start *2 < averageReadLength) {
           copyIntervals[c][i].filter = "FAIL";
@@ -2735,6 +2784,23 @@ int hmcnc(Parameters& params) {
     intersectDelCall(MdelT[c], copyIntervals[c], mean );
 
 
+  }
+  //
+  // Restore original copy number for high depth calls.
+  //
+  for (auto c=0; c < copyIntervals.size(); c++) {
+    for (auto i=0; i < copyIntervals[c].size(); i++) {
+      
+      int intvStart = copyIntervals[c][i].start/100;
+      int intvEnd   = copyIntervals[c][i].end/100;
+      if (copyIntervals[c][i].copyNumber >= MAX_CN-2) {	
+	double intvCoverage = std::accumulate(&origCovBins[c][intvStart], &origCovBins[c][intvEnd], 0);
+	double cnReal = 2*intvCoverage / ((intvEnd-intvStart)*mean);
+	int cn=round(cnReal);
+	//cerr << "Prev CN " << copyIntervals[c][i].copyNumber << " CUR: " << cn << endl;
+	copyIntervals[c][i].copyNumber = cn;
+      }
+    }
   }
 
 

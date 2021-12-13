@@ -40,7 +40,7 @@ Input:
   -b FILE                     Read depth bed from this file (skip calculation of depth).
   -s FILE                     Read SNVs from this file (when not estimating from a BAM).
   -p FILE                     Read parameter file (do not train with Baum-Welch).
-  -l FILE                         ** Need description for clipInFileName **
+  -l FILE                     Read clipping signature file (when not estimating from a BAM).
 
 Depth Calculation:
   -e FLOAT                    Value of log-epsilon. [-800]
@@ -55,8 +55,9 @@ Output:
   -C TEXT                     Only run hmm on this chrom.
   -B FILE                     Write coverage bed to this file.
   -P FILE                     Write trained parameter file.
-  -L FILE                         ** Need description for clipOutFileName **
   -S FILE                     Write SNVs to this file.
+  -L FILE                     Stores the number of reads with clipping > 500 bases in each bin.
+
 ```
 ### example
 
