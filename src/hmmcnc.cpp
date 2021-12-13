@@ -818,8 +818,6 @@ void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedInterv
   std::sort(intervals.begin(), intervals.end() , compareInterval);
   const int n = intervals.size();
   for (int i = 0; i < n - 1; i++) {
-    //debug
-
     if ((intervals[i].start >= intervals[i + 1].start && intervals[i].start <= intervals[i + 1].end) || (intervals[i].end>= intervals[i + 1].start && intervals[i].end<= intervals[i + 1].end)) { 
       intervals[i + 1].start = std::min(intervals[i].start, intervals[i + 1].start);
       intervals[i + 1].end= std::max(intervals[i].end, intervals[i + 1].end);
@@ -2030,7 +2028,7 @@ Parameters::Parameters()
     type_name("FILE");
 
   CLI.add_option("-l", clipInFileName,
-    "    ** Need description for clipInFileName ** ")->
+    "Read clipping signature file (when not estimating from a BAM). ")->
     group(inputGroupName)->
     type_name("FILE");
 

@@ -24,7 +24,7 @@ void ReadCoverage(std::istream &covFile,
   std::vector<std::string> fields;
   while (std::getline(covFile, line)) {
     fields.clear();
-    boost::split(fields, line, boost::is_any_of("\t"));
+    boost::split(fields, line, boost::is_any_of("\t "));
     if (fields.size() < 4) {
       std::cerr << "ERROR. Invalid BED input: '" << line << "'\n";
       exit(EXIT_FAILURE);
