@@ -1874,24 +1874,11 @@ int EstimateCoverage(const string &bamFileName,
   return 1;
 }
 
-void InitParams(vector<vector<double>> &covCovTransP,
-                vector<vector<double>> &covSnvTransP,
-                vector<vector<double>> &snvSnvTransP,
-                int nCovStates, int nSNVStates,
-                double diag, double offDiag, 
-                double beta, double epsi12,
-                vector<vector<double>> &emisP,
-                int model, int maxCov, double mean, double var,
-                vector<vector<vector<double>>> &binoP) 
-{
-  
-  covCovTransP.resize(nCovStates);
-  const double Diag = log(  1 - (exp(beta) + exp(epsi12) + (  exp(offDiag)   * (nCovStates-3))) );
 
-  for (int i=0;i<nCovStates;i++) {
-    covCovTransP[i].resize(nCovStates);
-    for (int j=0;j<nCovStates;j++) {
 
+
+
+/*
       if(i==2){//leaving normal state
         if(j==1){
           covCovTransP[i][j]=epsi12;
@@ -1901,25 +1888,44 @@ void InitParams(vector<vector<double>> &covCovTransP,
         }
         else if (j!=2){
           covCovTransP[i][j]=offDiag;
-
         }
         else{
           covCovTransP[i][j]=Diag;
         }
       }
-
-
       else{
         if(i==j) {
           covCovTransP[i][j]  = diag; //log(1 - std::exp(beta) );
         }
         else {
         covCovTransP[i][j] = offDiag;
-
-
-
         }
       }
+
+*/
+
+
+void InitParams(vector<vector<double>> &covCovTransP,
+                vector<vector<double>> &covSnvTransP,
+                vector<vector<double>> &snvSnvTransP,
+                int nCovStates, int nSNVStates,
+                double diag, double offDiag, 
+                double beta, double epsi12,
+                vector<vector<double>> &emisP,
+                int model, int maxCov, double mean, double var,
+                vector<vector<vector<double>>> &binoP) 
+{  
+  covCovTransP.resize(nCovStates);
+  //const double Diag = log(  1 - (exp(beta) + exp(epsi12) + (  exp(offDiag)   * (nCovStates-3))) );
+  for (int i=0;i<nCovStates;i++) {
+    covCovTransP[i].resize(nCovStates);
+    for (int j=0;j<nCovStates;j++) {
+      if(i<j)
+        covCovTransP[i][j]=epsi12;
+      else if(i==j)
+        covCovTransP[i][j]=log(1 - (i*exp(epsi12)) + (exp(beta)*((nStates-1)-i)));
+      else(i>j)
+        covCovTransP[i][j]=beta;
     }
   }
 
