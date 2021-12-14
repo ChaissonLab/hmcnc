@@ -1920,14 +1920,11 @@ void InitParams(vector<vector<double>> &covCovTransP,
   for (int i=0;i<nCovStates;i++) {
     covCovTransP[i].resize(nCovStates);
     for (int j=0;j<nCovStates;j++) {
-      if(i<j)
-        covCovTransP[i][j]=epsi12;
-      else if(i==j)
-        covCovTransP[i][j]=log(1 - (i*exp(epsi12)) + (exp(beta)*((nStates-1)-i)));
-      else(i>j)
-        covCovTransP[i][j]=beta;
-    }
+      if(i<j){covCovTransP[i][j]=beta;}
+      else if(i==j){covCovTransP[i][j]=log(1 - (i*exp(epsi12)) + (exp(beta)*((nCovStates-1)-i)));}
+      else{covCovTransP[i][j]=epsi12;}
   }
+}
 
 
 
