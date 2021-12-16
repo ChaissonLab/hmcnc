@@ -879,11 +879,17 @@ void quant( vector<vector<Interval>> & mergedIntervals ,double q, vector<string>
   std::sort(lens3.begin(),lens3.end(),compareIntervalLength);
   const int idx1= (int)(q * lens1.size());
   const int idx3= (int)(q * lens3.size());
+  const int idx1_5 = (int)(0.5 * lens1.size());
+  const int idx3_5 = (int)(0.5 * lens1.size());
+  
   stats.push_back(lens3[idx3]);
   stats.push_back(lens1[idx1]);
 
   cerr<<"99th percentile CN=3 length: "<<stats[0].end-stats[0].start<<"\n";
   cerr<<"99th percentile CN=1 length: "<<stats[1].end-stats[1].start<<"\n";
+  cerr<<"Median CN=3 length: "<<lens3[idx3_5].end - lens3[idx3_5].start<<"\n";
+  cerr<<"Median CN=1 length: "<<lens1[idx1_5].end - lens1[idx1_5].start<<"\n";
+
 
 }
 
@@ -1904,6 +1910,11 @@ int EstimateCoverage(const string &bamFileName,
 
 */
 
+  /*
+      if(i<j){covCovTransP[i][j]=beta;}
+      else if(i==j){covCovTransP[i][j]=log(1 - (i*exp(epsi12)) + (exp(beta)*((nCovStates-1)-i)));}
+      else{covCovTransP[i][j]=epsi12;}
+  */
 
 void InitParams(vector<vector<double>> &covCovTransP,
                 vector<vector<double>> &covSnvTransP,
@@ -1916,15 +1927,37 @@ void InitParams(vector<vector<double>> &covCovTransP,
                 vector<vector<vector<double>>> &binoP) 
 {  
   covCovTransP.resize(nCovStates);
-  //const double Diag = log(  1 - (exp(beta) + exp(epsi12) + (  exp(offDiag)   * (nCovStates-3))) );
+
+  //const double Diag = log(  1 -  (  exp(beta)   * (nCovStates-1)) );
+
+  const double Diag1 = log(  1 -  (  exp(beta)   * (nCovStates-2)) + exp(epsi12)  );
+
+  const double Diag2 = log(  (1 -  (  exp(beta)   * (nCovStates-2)) /2)) ;
+  
+
   for (int i=0;i<nCovStates;i++) {
     covCovTransP[i].resize(nCovStates);
     for (int j=0;j<nCovStates;j++) {
-      if(i<j){covCovTransP[i][j]=beta;}
-      else if(i==j){covCovTransP[i][j]=log(1 - (i*exp(epsi12)) + (exp(beta)*((nCovStates-1)-i)));}
-      else{covCovTransP[i][j]=epsi12;}
+      if(i==2)
+      {//leaving neutral state
+        if(i==j)
+          covCovTransP[i][j] = Diag1;
+        else if(j==1)
+          covCovTransP[i][j] = epsi12;
+        else
+          covCovTransP[i][j] = beta; 
+      }
+      else
+      {
+        if(i==j) 
+          covCovTransP[i][j] = Diag2; 
+        else if(j==2)
+          covCovTransP[i][j] = Diag2;
+        else
+          covCovTransP[i][j] = beta;
+      }
+    }
   }
-}
 
 
 
@@ -2589,11 +2622,16 @@ int hmcnc(Parameters& params) {
   const double beta1 = eps + (scaler1 * epsi12);  //log(nStates-1)
   const double beta_nb1 = eps + (scaler1 * lepsi21_nb);  //log(nStates-1)
 
+  const double beta_new = 100 * lepsi23_nb;
+
   std::cerr<<"empirical lepsi23: "<<lepsi23_emp<<" empirical lepsi21: "<<lepsi21_emp<<std::endl;
-  std::cerr<<"negBin lepsi23: "<<lepsi23_nb<<" negBin lepsi21: "<<lepsi21_nb<<std::endl;
-  std::cerr<<"poisson lepsi23: "<<epsi23<<" poisson lepsi21: "<<epsi12<<"\nscaler3: "<<scaler3<<"\tscaler1: "<<scaler1<<std::endl;
+ // std::cerr<<"negBin lepsi23: "<<lepsi23_nb<<" negBin lepsi21: "<<lepsi21_nb<<std::endl;
+ // std::cerr<<"poisson lepsi23: "<<epsi23<<" poisson lepsi21: "<<epsi12<<"\ns;
+  std::cerr<<"scaler3: "<<scaler3<<"\tscaler1: "<<scaler1<<std::endl;
   std::cerr<<"beta_p3: "<<beta<<" beta_nb3: "<<beta_nb<<std::endl;
   std::cerr<<"beta_p1: "<<beta1<<" beta_nb1: "<<beta_nb1<<std::endl;
+  std::cerr<<"Using beta: "<<beta_new<<std::endl;
+
 
   const int nSNVStates=3;
   const double unif=log(1.0/nStates);
@@ -2604,7 +2642,7 @@ int hmcnc(Parameters& params) {
   if (params.paramInFile == "") {
     InitParams(covCovTransP, covSnvTransP, snvSnvTransP,
 	       nStates, nSNVStates, log(1-exp(small)), log(exp(small)/(nStates-1)),
-         lepsi23_emp, lepsi21_emp,
+         beta_new, lepsi21_emp,
 	       emisP, params.model, maxCov, mean, var, binoP);
     printModel(covCovTransP, &cerr);
     //    printEmissions(emisP);
