@@ -713,7 +713,7 @@ void AssignNearestClip(vector<vector<int > > &clipBins,
       if (maxClipPos != -1) {
         intervals[contig][i].distanceToFrontClip=abs(maxClipPos - intvStart);
         intervals[contig][i].nFrontClip=maxClip;
-        cerr << "Found start clip for " << contig << "\t"
+        cerr << "Found start clip for " << contigNames[contig] << "\t"
              << i << "\t"
              << intervals[contig][i].distanceToFrontClip << "\t"
              << intervals[contig][i].nFrontClip << "\t"
@@ -736,7 +736,7 @@ void AssignNearestClip(vector<vector<int > > &clipBins,
       if (maxClipPos != -1) {
         intervals[contig][i].distanceToEndClip=abs(maxClipPos - intvEnd);
         intervals[contig][i].nEndClip=maxClip;
-        cerr << "Found End clip for " << contig << "\t"
+        cerr << "Found End clip for " << contigNames[contig] << "\t"
              << i << "\t"
              << intervals[contig][i].distanceToEndClip << "\t"
              << intervals[contig][i].nEndClip << "\t"
@@ -1921,7 +1921,7 @@ void InitParams(vector<vector<double>> &covCovTransP,
                 vector<vector<double>> &snvSnvTransP,
                 int nCovStates, int nSNVStates,
                 double diag, double offDiag, 
-                double beta, double epsi12,
+                double beta, double epsi12, double epsi23, 
                 vector<vector<double>> &emisP,
                 int model, int maxCov, double mean, double var,
                 vector<vector<vector<double>>> &binoP) 
@@ -1930,20 +1930,36 @@ void InitParams(vector<vector<double>> &covCovTransP,
 
   //const double Diag = log(  1 -  (  exp(beta)   * (nCovStates-1)) );
 
-  const double Diag1 = log(  1 -  (  exp(beta)   * (nCovStates-2)) + exp(epsi12)  );
+  const double Diag1 = log(  1 -  (  exp(beta)   * (nCovStates-3)) + exp(epsi23) + exp(epsi12)  );
 
   const double Diag2 = log(  (1 -  (  exp(beta)   * (nCovStates-2)) /2)) ;
   
 
+  const double Diag0 = log(  1 -  (  exp(beta)   * (nCovStates-2)) +  exp(epsi12)  );
+
+
   for (int i=0;i<nCovStates;i++) {
     covCovTransP[i].resize(nCovStates);
     for (int j=0;j<nCovStates;j++) {
-      if(i==2)
+      if (i==0)
+      {//leaving del state
+        if (j==0)
+          covCovTransP[i][j] = Diag0 - log(2);
+        else if(j==1)
+          covCovTransP[i][j] = epsi12;
+        else if(j==2)
+          covCovTransP[i][j] = Diag0 - log(2);
+        else
+          covCovTransP[i][j] = beta;
+      }
+      else if(i==2)
       {//leaving neutral state
         if(i==j)
           covCovTransP[i][j] = Diag1;
         else if(j==1)
           covCovTransP[i][j] = epsi12;
+        else if (j==3)
+          covCovTransP[i][j] = epsi23;
         else
           covCovTransP[i][j] = beta; 
       }
@@ -2611,6 +2627,7 @@ int hmcnc(Parameters& params) {
   const double lepsi21_nb = LgNegBinom(1, (int) mean , (float) (mean/2), (float)(var/2)  ) - LgNegBinom(2, (int) mean , (float) (mean/2), (float)(var/2)  );
 
 
+
   const double small=-30;
 
   const double eps = log(1);
@@ -2642,7 +2659,7 @@ int hmcnc(Parameters& params) {
   if (params.paramInFile == "") {
     InitParams(covCovTransP, covSnvTransP, snvSnvTransP,
 	       nStates, nSNVStates, log(1-exp(small)), log(exp(small)/(nStates-1)),
-         beta_new, lepsi21_emp,
+         beta_new, lepsi21_emp, beta_nb,
 	       emisP, params.model, maxCov, mean, var, binoP);
     printModel(covCovTransP, &cerr);
     //    printEmissions(emisP);
