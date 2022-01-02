@@ -328,9 +328,7 @@ void WriteBed( const std::vector<std::vector<Interval>> &intv,
           << intv[c][i].averageCoverage << '\t'
           << cnLength <<'\t'
           << intv[c][i].pVal << '\t'
-          << intv[c][i].filter<< '\t' 
-          << intv[c][i].altInfo << "\t"
-          << intv[c][i].altSample<< '\n';
+          << intv[c][i].filter<< '\n';
     }
   }
 }
