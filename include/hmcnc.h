@@ -137,6 +137,7 @@ bool compareInterval(Interval i1, Interval i2);
 
 bool compareIntervalLength(Interval i1, Interval i2);
 
+void calcMeanClip( std::vector<int> &clipBins , double clipSum, double clipCount);
 
 void mergeIntervals(std::vector<Interval> &intervals, std::vector<Interval> &mergedIntervals, std::string contig);
 

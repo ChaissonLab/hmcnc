@@ -47,45 +47,17 @@ static double max_over_rows(vector<vector<double>> &v , size_t col ,vector<vecto
 /*
 // try/add negB()
 */
-
-bool is_rclip(int index, int nStates)
+//0left,1normal,2right
+bool is_clip(int index, int nStates, int state)
 {
-    if (std::floor(   (double) (index/(nStates/3) )  ) ==2)// && index != nStates  )
-        return 1;
-    else
-        return 0;
-}
+    return (std::floor(   (double) (index/(nStates/3) )  ) ==state);
 
-bool is_nclip(int index, int nStates)
-{
-    if (std::floor( (double)(index/(nStates/3))    ) ==1)
-        return 1;
-    else
-        return 0;
-}
-
-
-bool is_lclip(int index,int nStates)
-{
-    if ( std::floor(  (double) (index/(nStates/3) )      ) == 0 )//|| index==(nStates/3) )
-        return 1;
-    else
-        return 0;
 }
 
 int return_cn(int i,int nStates)
 {
     int result =std::floor(   (double) ( i/(nStates/3) )  );
-    int r;
-    //    if(i/(nStates/3)==0 || i/(nStates/3)==1 || i/(nStates/3)==2)
-    //      r=0;
-    if(result==0)
-        r=i;
-    else if(result==1)
-        r=i-(nStates/3);
-    else if (result==2)
-        r=i-((nStates/3)*2);
-    return r;
+    return (i-((nStates/3)*result));
 }
 
 double emissionPr( size_t index,
@@ -112,37 +84,26 @@ double emissionPr( size_t index,
         }
     }//truncate possible coverage observations
 
-    if (state==nStates)
-    {
-        //cov=max_obs;
-        if(cov>max_obs){
-            return log(1-epsi);
-        }
-        else{
-            return log(epsi);
-        }
-    }//truncate possible coverage observations
-
     double clip_pr=0;
     double result;
     int clip = cl_observations[index+1]; //shift clip by -1 w.r.t. coverage
     // clip threshold 3
 
-    if (is_rclip((int) state, (int) nStates) ) //right clipping
+    if (is_clip((int) state, (int) nStates),2 ) //right clipping
     {
         if (clip <= (-1*(clip_thr)) )
             clip_pr=1-epsi;
         else
             clip_pr=epsi;
     }//right clip
-    else if(is_lclip((int) state, (int) nStates) )
+    else if(is_clip((int) state, (int) nStates) ,0)
     {
         if (clip >= clip_thr)
             clip_pr=1-epsi;
         else
             clip_pr=epsi;
     }//left clip
-    else if(is_nclip((int) state, (int) nStates )  ) 
+    else if(is_clip((int) state, (int) nStates ), 1  ) 
     {
         if (clip > (-1*(clip_thr)) && clip < clip_thr)
             clip_pr=1-epsi;
@@ -178,10 +139,7 @@ void viterbi( vector<double> &startP,
  //       double max_ini= -1 * (std::numeric_limits<double>::max());
 
         v[i][0] =  startP[i] + emissionPr( 0, i , observations,cl_observations,emisP, mean, max_obs,nStates ,clip_thr);
-   //     if (v[i][0]>max)
-     //   {
-       //     viterbiPath[i][0]=0;
-        //}
+   
     }
     // Iteration
     for(size_t k=1 ; k<nObservations ; k++)
