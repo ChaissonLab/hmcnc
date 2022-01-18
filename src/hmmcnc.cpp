@@ -2448,20 +2448,25 @@ int hmcnc(Parameters& params) {
 
   const poisson distributionClip(clipMean);
   double prN;
+  
   for (auto c=0 ;c < contigNames.size(); c++) {
     for (auto b=0 ;b < clipBins[c].size(); b++) {
 
       prN = pdf(distributionClip, clipBins[c][b]);
       prN = max(10E-9,prN);
 
-      Pn.push_back(log(prN));
-      Pcl.push_back(log(1-prN));
+      Pn[c].push_back(log(prN));
+      Pcl[c].push_back(log(1-prN));
     }
   }
 
-for (int i=0;i<Pcl.size();i++){
-  std:cout<<Pn[i]<<"\t"<<Pcl[i]<<endl;
-}
+  for (auto c=0 ;c < contigNames.size(); c++) {
+    for (int i=0;i<Pcl[c].size();i++){
+    std:cout<<Pn[c][i]<<"\t"<<Pcl[c][i]<<endl;
+    }
+  }
+
+
 
   vector<Interval> stats;
   quant(mergedNaiveIntervals, 0.99, contigNames, stats);
