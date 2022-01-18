@@ -1340,7 +1340,7 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
                                 f, b,
                                 expCovCovTransP,
                                 expEmisP,
-                                *threadInfo->Pn, *threadInfo->Pcl);
+                                *threadInfo->n, *threadInfo->cl);
 
     //
     // Update expected transitions
