@@ -2442,7 +2442,6 @@ int hmcnc(Parameters& params) {
 
   clipMean = max( round((mean/2)/5) , clipMean);
 
-  vector<double> Pn,Pcl;
   const poisson distributionClip(clipMean);
   double prN;
   for (auto c=0 ;c < contigNames.size(); c++) {
