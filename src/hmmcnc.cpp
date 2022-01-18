@@ -643,7 +643,11 @@ double BaumWelchEOnChrom(const vector<double> &startP,
 
   const int nStates = static_cast<int>(startP.size());
   const int nObs = obs.size();
+  const int nclObs = Pn.size();
+
   const double px = ForwardBackwards(startP, covCovTransP, emisP, obs, f, b);
+
+  assert(nObs==nclObs);
 
   for (int k=1; k< nObs-1; k++) {
     double logSum = 0;
@@ -2438,21 +2442,26 @@ int hmcnc(Parameters& params) {
   }
 
   double clipMean = (clippingSum/clipCount);
-  cerr<<"Clip Mean: "<<clipMean<<"\nLower Threshold: "<<round((mean/2)/5)<<endl;
+  cerr<<"Clip Mean: "<<clipMean<<"\nLower Threshold: "<<round(mean/10)<<endl;
 
-  clipMean = max( round((mean/2)/5) , clipMean);
+  clipMean = max( round(mean/10) , clipMean);
 
   const poisson distributionClip(clipMean);
   double prN;
   for (auto c=0 ;c < contigNames.size(); c++) {
-    for (auto b=0 ;b < contigNames[c].size(); b++) {
+    for (auto b=0 ;b < clipBins[c].size(); b++) {
 
       prN = pdf(distributionClip, clipBins[c][b]);
+      prN = max(10E-9,prN);
+
       Pn.push_back(log(prN));
       Pcl.push_back(log(1-prN));
     }
   }
 
+for (int i=0;i<Pcl.size();i++){
+  std:cout<<Pn[i]<<"\t"<<Pcl[i]<<endl;
+}
 
   vector<Interval> stats;
   quant(mergedNaiveIntervals, 0.99, contigNames, stats);
