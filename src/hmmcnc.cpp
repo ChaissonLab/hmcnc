@@ -266,6 +266,8 @@ public:
   vector<int> procChroms;
   vector<vector<int>> *covBins;
   vector<vector<int>> *clipBins;
+  vector<int> *Pcl,*Pn;
+
   vector<vector<SNV>> *snvs;
   vector<vector<int>> *copyNumber;
   vector<vector<double>> *transP, *emisP, *expTransP, *expEmisP, *clTransP;
@@ -840,7 +842,7 @@ void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedInterv
 }
 
 
-void calcMeanClip(vector<int> clipBins, double clippingSum, double clipCount){
+void calcMeanClip(vector<int> &clipBins, double clippingSum, double clipCount){
   for (int i=0; i < clipBins.size(); i++){
     if (clipBins[i]>0){
       clippingSum+=clipBins[i];
