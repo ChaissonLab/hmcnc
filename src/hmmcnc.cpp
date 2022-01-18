@@ -266,7 +266,7 @@ public:
   vector<int> procChroms;
   vector<vector<int>> *covBins;
   vector<vector<int>> *clipBins;
-  vector<double> *cl,*n;
+  vector<vector<double>> *cl,*n;
 
   vector<vector<SNV>> *snvs;
   vector<vector<int>> *copyNumber;
