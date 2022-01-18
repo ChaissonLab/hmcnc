@@ -2436,9 +2436,9 @@ int hmcnc(Parameters& params) {
   }
 
   double clipMean = (clippingSum/clipCount);
+  cerr<<"Clip Mean: "<<clipMean<<"\nLower Threshold: "<<round((mean/2)/5)<<endl;
 
   clipMean = max( round((mean/2)/5) , clipMean);
-  cerr<<"Clip Mean: "<<clipMean<<"\nLower Threshold: "<<round(Hmean/5)<<endl;
 
   vector<double> Pn,Pcl;
   const poisson distributionClip(clipMean);
