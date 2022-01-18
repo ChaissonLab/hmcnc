@@ -266,7 +266,7 @@ public:
   vector<int> procChroms;
   vector<vector<int>> *covBins;
   vector<vector<int>> *clipBins;
-  vector<double> *Pcl,*Pn;
+  vector<double> *cl,*n;
 
   vector<vector<SNV>> *snvs;
   vector<vector<int>> *copyNumber;
@@ -1340,7 +1340,7 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
                                 f, b,
                                 expCovCovTransP,
                                 expEmisP,
-                                *threadInfo->Pn, *threadInfo->Pcl);
+                                *threadInfo->n, *threadInfo->cl);
 
     //
     // Update expected transitions
@@ -2175,7 +2175,7 @@ int hmcnc(Parameters& params) {
   double var;
   int nStates;
   int maxCov;
-  vector<double> startP;
+  vector<double> startP, Pcl, Pn;
   vector<vector<double>> covCovTransP, covSnvTransP, snvSnvTransP, clipCovCovTransP;
   vector<vector<double>> updateTransP;
   vector<vector<SNV>> snvs;
@@ -2311,8 +2311,8 @@ int hmcnc(Parameters& params) {
 
     threadInfo[procIndex].clTransP = &clipCovCovTransP;
     
-    threadInfo[procIndex].Pcl = &Pcl;
-    threadInfo[procIndex].Pn = &Pn;
+    threadInfo[procIndex].cl = &Pcl;
+    threadInfo[procIndex].n = &Pn;
 
     threadInfo[procIndex].expTransP = &expCovCovTransP;
     threadInfo[procIndex].expEmisP = &expEmisP;
