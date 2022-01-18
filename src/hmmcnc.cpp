@@ -268,7 +268,7 @@ public:
   vector<vector<int>> *clipBins;
   vector<vector<SNV>> *snvs;
   vector<vector<int>> *copyNumber;
-  vector<vector<double>> *transP, *emisP, *expTransP, *expEmisP;
+  vector<vector<double>> *transP, *emisP, *expTransP, *expEmisP, *clTransP;
   vector<double> *startP;
   vector<vector<Interval>> *copyIntervals;
   vector<double> *chromCopyNumber;
@@ -652,8 +652,8 @@ double BaumWelchEOnChrom(const vector<double> &startP,
     for (size_t i=0; i < covCovTransP.size(); i++) {
       covCovTransP[i].resize(covCovTransP[i].size());
       for (size_t j=0; j < covCovTransP[i].size(); j++) {
-        clipsum = PairSumOfLogP(covCovTransP[i][j] + Pn[k] , clipCovCovTransP[i][j] + Pcl[k] );
-        logSum = PairSumOfLogP(logSum, f[i][k] + clipsum + emisP[j][obs[k+1]] + b[j][k+1]);
+        clipSum = PairSumOfLogP(covCovTransP[i][j] + Pn[k] , clipCovCovTransP[i][j] + Pcl[k] );
+        logSum = PairSumOfLogP(logSum, f[i][k] + clipSum + emisP[j][obs[k+1]] + b[j][k+1]);
       }
     }
     for (size_t i=0; i < covCovTransP.size(); i++) {
@@ -840,10 +840,10 @@ void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedInterv
 }
 
 
-void calcMeanClip(vector<int> clipBins, double clipSum, double clipCount){
+void calcMeanClip(vector<int> clipBins, double clippingSum, double clipCount){
   for (int i=0; i < clipBins.size(); i++){
     if (clipBins[i]>0){
-      clipSum+=clipBins[i];
+      clippingSum+=clipBins[i];
       clipCount+=1;
     } 
   }
@@ -2422,22 +2422,22 @@ int hmcnc(Parameters& params) {
   ChromCopyNumber(covBins, mean,chromCopyNumber);
 
 
-  double clipSum = 0;
+  double clippingSum = 0;
   double clipCount = 0; 
   for (auto c=0 ;c < contigNames.size(); c++) {
     if (chromCopyNumber[c] > 1.5 and chromCopyNumber[c] < 2.5) {
       NaiveCaller(covBins[c], UnmergedNaiveIntervals[c], mean );
       mergeNaiveIntervals(UnmergedNaiveIntervals[c], mergedNaiveIntervals[c], contigNames[c] );
-      calcMeanClip(clipBins[c], clipSum,clipCount);
+      calcMeanClip(clipBins[c], clippingSum,clipCount);
     }
     else {
       cerr << "Not using naive depth on " << contigNames[c] << " copy number " << chromCopyNumber[c] << endl;
     }
   }
 
-  double clipMean = (clipSum/clipCount);
+  double clipMean = (clippingSum/clipCount);
 
-  clipMean = max( round(Hmean/5) , clipMean);
+  clipMean = max( round((mean/2)/5) , clipMean);
   cerr<<"Clip Mean: "<<clipMean<<"\nLower Threshold: "<<round(Hmean/5)<<endl;
 
   vector<double> Pn,Pcl;
