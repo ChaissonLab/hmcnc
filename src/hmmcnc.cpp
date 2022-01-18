@@ -845,8 +845,8 @@ void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedInterv
   }
 }
 
-
-void calcMeanClip(vector<int> &clipBins, double clippingSum, double clipCount){
+/*
+void calcMeanClip(vector<int> &clipBins, double &clippingSum, double &clipCount){
   for (int i=0; i < clipBins.size(); i++){
     if (clipBins[i]>0){
       clippingSum+=clipBins[i];
@@ -854,7 +854,7 @@ void calcMeanClip(vector<int> &clipBins, double clippingSum, double clipCount){
     } 
   }
 }
-
+*/
 void mergeNaiveIntervals(vector<Interval> &intervals, vector<Interval> &mergedIntervals, string contig) {
   
   //std::sort(intervals.begin(), intervals.end() , compareInterval);
@@ -2438,8 +2438,14 @@ int hmcnc(Parameters& params) {
     if (chromCopyNumber[c] > 1.5 and chromCopyNumber[c] < 2.5) {
       NaiveCaller(covBins[c], UnmergedNaiveIntervals[c], mean );
       mergeNaiveIntervals(UnmergedNaiveIntervals[c], mergedNaiveIntervals[c], contigNames[c] );
-      calcMeanClip(clipBins[c], clippingSum,clipCount);
-    }
+
+      for (int i=0; i < clipBins[c].size(); i++){
+        if (clipBins[c][i]>0){
+          clippingSum+=clipBins[c][i];
+          clipCount+=1;
+        }
+      }
+
     else {
       cerr << "Not using naive depth on " << contigNames[c] << " copy number " << chromCopyNumber[c] << endl;
     }
