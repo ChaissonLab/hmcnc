@@ -845,16 +845,8 @@ void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedInterv
   }
 }
 
-/*
-void calcMeanClip(vector<int> &clipBins, double &clippingSum, double &clipCount){
-  for (int i=0; i < clipBins.size(); i++){
-    if (clipBins[i]>0){
-      clippingSum+=clipBins[i];
-      clipCount+=1;
-    } 
-  }
-}
-*/
+
+
 void mergeNaiveIntervals(vector<Interval> &intervals, vector<Interval> &mergedIntervals, string contig) {
   
   //std::sort(intervals.begin(), intervals.end() , compareInterval);
@@ -2443,14 +2435,14 @@ int hmcnc(Parameters& params) {
         if (clipBins[c][i]>0){
           clippingSum+=clipBins[c][i];
           clipCount+=1;
-        }
+        } 
       }
 
-      else {
-        cerr << "Not using naive depth on " << contigNames[c] << " copy number " << chromCopyNumber[c] << endl;
-      }
     }
-  }  
+    else {
+      cerr << "Not using naive depth on " << contigNames[c] << " copy number " << chromCopyNumber[c] << endl;
+    }
+  }
 
   double clipMean = (clippingSum/clipCount);
   cerr<<"Clip Mean: "<<clipMean<<"\nLower Threshold: "<<round(mean/10)<<endl;
