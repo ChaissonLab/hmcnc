@@ -2346,23 +2346,24 @@ int hmcnc(Parameters& params) {
   if (params.snvInFileName == "") {
     snvs.resize(contigLengths.size());
   }
+
   if (params.clipInFileName == "") {
     clipBins.resize(contigLengths.size());
+    Pn.resize(contigLengths.size());
+    Pcl.resize(contigLengths.size());
     for (size_t c=0; c < contigLengths.size(); c++ ) {
       clipBins[c].resize(contigLengths[c]/BIN_LENGTH);
+      Pn[c].resize(contigLengths[c]/BIN_LENGTH);    
+      Pcl[c].resize(contigLengths[c]/BIN_LENGTH);    
+        
     }
   }
   if (params.covBedInFileName == "") {
     covBins.resize(contigLengths.size());
-    Pn.resize(contigLengths.size());
-    Pcl.resize(contigLengths.size());
-
     for (size_t c=0; c < contigLengths.size(); c++ ) {
       covBins[c].resize(contigLengths[c]/BIN_LENGTH);
       clipBins[c].resize(contigLengths[c]/BIN_LENGTH);
       copyNumber[c].resize(contigLengths[c]/BIN_LENGTH);
-      Pn[c].resize(contigLengths[c]/BIN_LENGTH);    
-      Pcl[c].resize(contigLengths[c]/BIN_LENGTH);    
     }
 
     //
@@ -2447,7 +2448,7 @@ int hmcnc(Parameters& params) {
   double clipMean = (clippingSum/clipCount);
   cerr<<"Clip Mean: "<<clipMean<<"\nLower Threshold: "<<round(mean/10)<<endl;
 
-  clipMean = max( round(mean/10) , clipMean);
+ // clipMean = max( round(mean/10) , clipMean);
 
   const poisson distributionClip(clipMean);
   double prN;
@@ -2458,8 +2459,8 @@ int hmcnc(Parameters& params) {
       prN = pdf(distributionClip, clipBins[c][b]);
       prN = max(10E-9,prN);
 
-      Pn[c].push_back(log(prN));
-      Pcl[c].push_back(log(1-prN));
+      Pn[c][b] = (log(prN));
+      Pcl[c][b] = (log(1-prN));
     }
   }
 
