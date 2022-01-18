@@ -2446,10 +2446,11 @@ int hmcnc(Parameters& params) {
         }
       }
 
-    else {
-      cerr << "Not using naive depth on " << contigNames[c] << " copy number " << chromCopyNumber[c] << endl;
+      else {
+        cerr << "Not using naive depth on " << contigNames[c] << " copy number " << chromCopyNumber[c] << endl;
+      }
     }
-  }
+  }  
 
   double clipMean = (clippingSum/clipCount);
   cerr<<"Clip Mean: "<<clipMean<<"\nLower Threshold: "<<round(mean/10)<<endl;
