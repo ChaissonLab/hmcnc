@@ -1344,7 +1344,7 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
                                 f, b,
                                 expCovCovTransP,
                                 expEmisP,
-                                (*threadInfo->n)[curSeq], (*threadInfo->cl)[curSeq];
+                                (*threadInfo->n)[curSeq], (*threadInfo->cl)[curSeq]);
 
     //
     // Update expected transitions
