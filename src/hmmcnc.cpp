@@ -630,6 +630,7 @@ void ApplyPriorToTransP(vector<vector<int> > &f,
 
 double BaumWelchEOnChrom(const vector<double> &startP,
 			 vector<vector<double>> &covCovTransP,
+       vector<vector<double>> &clipCovCovTransP,       
 			 vector<vector<double>> &emisP,
 			 vector<int> &obs,
 			 vector<vector<double>> &f,
@@ -651,13 +652,13 @@ double BaumWelchEOnChrom(const vector<double> &startP,
     for (size_t i=0; i < covCovTransP.size(); i++) {
       covCovTransP[i].resize(covCovTransP[i].size());
       for (size_t j=0; j < covCovTransP[i].size(); j++) {
-        clipsum = PairSumOfLogP(covCovTransP[i][j] + Pn[k] , clipCovCovTransP[i][j] + Pcl[k] )
+        clipsum = PairSumOfLogP(covCovTransP[i][j] + Pn[k] , clipCovCovTransP[i][j] + Pcl[k] );
         logSum = PairSumOfLogP(logSum, f[i][k] + clipsum + emisP[j][obs[k+1]] + b[j][k+1]);
       }
     }
     for (size_t i=0; i < covCovTransP.size(); i++) {
       for (size_t j=0; j < covCovTransP[i].size(); j++) {
-        const double pEdge=f[i][k] + PairSumOfLogP(covCovTransP[i][j] + Pn[k] , clipCovCovTransP[i][j] + Pcl[k] ) + emisP[j][obs[k+1]] + b[j][k+1];
+        double pEdge=f[i][k] + PairSumOfLogP(covCovTransP[i][j] + Pn[k] , clipCovCovTransP[i][j] + Pcl[k] ) + emisP[j][obs[k+1]] + b[j][k+1];
         assert(isnan(exp(pEdge-logSum)) == false);
         expCovCovTransP[i][j] += exp(pEdge - logSum);
       }
@@ -839,8 +840,8 @@ void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedInterv
 }
 
 
-void calcMeanClip(clipBins, clipSum, clipCount){
-  for (i=0; i < clipBins.size(); i++){
+void calcMeanClip(vector<int> clipBins, double clipSum, double clipCount){
+  for (int i=0; i < clipBins.size(); i++){
     if (clipBins[i]>0){
       clipSum+=clipBins[i];
       clipCount+=1;
@@ -1330,12 +1331,14 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
     }
 
     pChrom = BaumWelchEOnChrom(*threadInfo->startP,
-			       *threadInfo->transP,
-			       *threadInfo->emisP,
-			       (*threadInfo->covBins)[curSeq],
-			       f, b,
-			       expCovCovTransP,
-			       expEmisP);
+                                *threadInfo->transP,
+                                *threadInfo->clTransP,             
+                                *threadInfo->emisP,
+                                (*threadInfo->covBins)[curSeq],
+                                f, b,
+                                expCovCovTransP,
+                                expEmisP,
+                                *threadInfo->Pn, *threadInfo->Pcl);
 
     //
     // Update expected transitions
@@ -1844,45 +1847,57 @@ void InitParams(vector<vector<double>> &covCovTransP,
     for (int j=0;j<nCovStates;j++) {
       if (i==0)
       {//leaving del state
-        if (j==0)
+        if (j==0){
           covCovTransP[i][j] = Diag0 - log(2);
           clipCovCovTransP[i][j] = clDiag0 - log(2);
-        else if(j==1)
+        }
+        else if(j==1){
           covCovTransP[i][j] = epsi12;
           clipCovCovTransP[i][j] = epsi12;
-        else if(j==2)
+        }
+        else if(j==2){
           covCovTransP[i][j] = Diag0 - log(2);
           clipCovCovTransP[i][j] = clDiag0 - log(2);
-        else
+        }
+        else{
           covCovTransP[i][j] = beta;
           clipCovCovTransP[i][j] = clipBeta;
+        }
       }
+
       else if(i==2)
       {//leaving neutral state
-        if(i==j)
+        if(i==j){
           covCovTransP[i][j] = Diag1;
           clipCovCovTransP[i][j] = clDiag1;
-        else if(j==1)
+        }
+        else if(j==1){
           covCovTransP[i][j] = epsi12;
           clipCovCovTransP[i][j] = epsi12;
-        else if (j==3)
+        }
+        else if (j==3){
           covCovTransP[i][j] = epsi23;
           clipCovCovTransP[i][j] = epsi23;
-        else
+        }
+        else{
           covCovTransP[i][j] = beta; 
           clipCovCovTransP[i][j] = clipBeta; 
+        }
       }
       else
       {
-        if(i==j) 
+        if(i==j){ 
           covCovTransP[i][j] = Diag2; 
           clipCovCovTransP[i][j] = clDiag2; 
-        else if(j==2)
+        }
+        else if(j==2){
           covCovTransP[i][j] = Diag2;
           clipCovCovTransP[i][j] = clDiag2;
-        else
+        }
+        else{
           covCovTransP[i][j] = beta;
           clipCovCovTransP[i][j] = clipBeta;
+        }
       }
     }
   }
@@ -2291,6 +2306,12 @@ int hmcnc(Parameters& params) {
     threadInfo[procIndex].var = var;
     threadInfo[procIndex].hmmChrom = params.hmmChrom;
     threadInfo[procIndex].transP = &covCovTransP;
+
+    threadInfo[procIndex].clTransP = &clipCovCovTransP;
+    
+    threadInfo[procIndex].cl = &Pcl;
+    threadInfo[procIndex].n = &Pn;
+
     threadInfo[procIndex].expTransP = &expCovCovTransP;
     threadInfo[procIndex].expEmisP = &expEmisP;
     threadInfo[procIndex].emisP = &emisP;
@@ -2596,6 +2617,8 @@ int hmcnc(Parameters& params) {
          beta_new, clipBeta, lepsi21_emp, beta_nb,
 	       emisP, params.model, maxCov, mean, var, binoP);
     printModel(covCovTransP, &cerr);
+    printModel(clipCovCovTransP, &cerr);
+    
     //    printEmissions(emisP);
 
 

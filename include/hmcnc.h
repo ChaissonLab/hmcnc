@@ -79,13 +79,15 @@ struct Parameters {
 // ----------------------
 
 double BaumWelchEOnChrom(const std::vector<double> &startP,
-                         std::vector<std::vector<double>> &covCovTransP,
-                         std::vector<std::vector<double>> &emisP,
-                         std::vector<int> &obs,
-                         std::vector<std::vector<double>> &f,
-                         std::vector<std::vector<double>> &b,
-                         std::vector<std::vector<double>> &expCovCovTransP,
-                         std::vector<std::vector<double>> &expEmisP);
+                          std::vector<std::vector<double>> &covCovTransP,
+                          std::vector<std::vector<double>> &clipCovCovTransP,
+                          std::vector<std::vector<double>> &emisP,
+                          std::vector<int> &obs,
+                          std::vector<std::vector<double>> &f,
+                          std::vector<std::vector<double>> &b,
+                          std::vector<std::vector<double>> &expCovCovTransP,
+                          std::vector<std::vector<double>> &expEmisP,
+                          std::vector<double> &Pn, std::vector<double> &Pcl);
 
 void BaumWelchM(const std::vector<double> &startP,
                 const std::vector<std::vector<double>> &transP,
