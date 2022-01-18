@@ -1344,7 +1344,7 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
                                 f, b,
                                 expCovCovTransP,
                                 expEmisP,
-                                *threadInfo->n, *threadInfo->cl);
+                                (*threadInfo->n)[curSeq], (*threadInfo->cl)[curSeq];
 
     //
     // Update expected transitions
@@ -2179,13 +2179,13 @@ int hmcnc(Parameters& params) {
   double var;
   int nStates;
   int maxCov;
-  vector<double> startP, Pcl, Pn;
+  vector<double> startP;
   vector<vector<double>> covCovTransP, covSnvTransP, snvSnvTransP, clipCovCovTransP;
   vector<vector<double>> updateTransP;
   vector<vector<SNV>> snvs;
   vector<vector<int>> copyNumber;
   vector< vector<double>> fCov, bCov, fSNV, bSNV;
-  vector<vector<double>> emisP;
+  vector<vector<double>> emisP , Pcl, Pn;
   vector<vector<double>> updateEmisP;
   vector<vector<vector< double>>> binoP;
   vector<vector<double>> expCovCovTransP, expCovSnvTransP, expSnvSnvTransP, expEmisP;
@@ -2362,11 +2362,15 @@ int hmcnc(Parameters& params) {
   }
   if (params.covBedInFileName == "") {
     covBins.resize(contigLengths.size());
+    Pn.resize(contigLengths.size());
+    Pcl.resize(contigLengths.size());
 
     for (size_t c=0; c < contigLengths.size(); c++ ) {
       covBins[c].resize(contigLengths[c]/BIN_LENGTH);
       clipBins[c].resize(contigLengths[c]/BIN_LENGTH);
       copyNumber[c].resize(contigLengths[c]/BIN_LENGTH);
+      Pn[c].resize(contigLengths[c]/BIN_LENGTH);    
+      Pcl[c].resize(contigLengths[c]/BIN_LENGTH);    
     }
 
     //
