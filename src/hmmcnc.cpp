@@ -501,14 +501,17 @@ double CSEmisP(int state,
 
 double ForwardBackwards(const vector<double> &startP,
                         const vector<vector<double>> &covCovTransP,
-                        const vector<vector<double>> &emisP,
-                        const vector<int> &obs,
-                        vector<vector<double>> &f,
-                        vector<vector<double>> &b) {
+                        const std::vector<std::vector<double>> &clipCovCovTransP,
+                        const std::vector<std::vector<double>> &emisP,
+                        const std::vector<int> &obs,
+                        std::vector<std::vector<double>> &f,
+                        std::vector<std::vector<double>> &b,
+                        std::vector<double> &Pn, std::vector<double> &Pcl) {
   const int totObs    = static_cast<int>(obs.size());
   const int nCovObs   = static_cast<int>(obs.size());
   const int nCovStates = static_cast<int>(startP.size());
   assert(nCovStates > 0);
+
   //
   // Eventually this can be done with logic in the code, but for now just store a
   // flag at each observation if it is an SNV or cov emission.
@@ -553,7 +556,7 @@ double ForwardBackwards(const vector<double> &startP,
   }
   int prevCovIdx=0, curCovIdx=0;
   int prevSNVIdx=0, curSNVIdx=0;
-
+  double clipSum=0;
   for (int k=0; k < totObs; k++) {
     for (int i=0; i < nCovStates; i++) {
       double colSum=0;
@@ -563,7 +566,8 @@ double ForwardBackwards(const vector<double> &startP,
         assert(k < f[j].size());
         assert(j < covCovTransP.size());
         assert(i < covCovTransP[j].size());
-        colSum = PairSumOfLogP(colSum, f[j][k] + covCovTransP[j][i]);
+        clipSum = PairSumOfLogP(covCovTransP[i][j] + Pn[k] , clipCovCovTransP[i][j] + Pcl[k] );
+        colSum = PairSumOfLogP(colSum, f[j][k] + clipSum);
       }
       assert(obs[k] < emisP[i].size());
       f[i][k+1] = colSum + emisP[i][obs[k]];
@@ -581,7 +585,8 @@ double ForwardBackwards(const vector<double> &startP,
       for (int j=0; j < nCovStates; j++) {
         assert(j== 0 or colSum != 0);
         assert(prevCovIdx < obs.size()+1);
-        colSum = PairSumOfLogP(colSum, b[j][k+1] + covCovTransP[j][i] + emisP[j][obs[k]]);
+        clipSum = PairSumOfLogP(covCovTransP[i][j] + Pn[k] , clipCovCovTransP[i][j] + Pcl[k] );
+        colSum = PairSumOfLogP(colSum, b[j][k+1] + clipSum + emisP[j][obs[k]]);
       }
       b[i][k] = colSum;
     }
@@ -645,7 +650,7 @@ double BaumWelchEOnChrom(const vector<double> &startP,
   const int nObs = obs.size();
   const int nclObs = Pn.size();
 
-  const double px = ForwardBackwards(startP, covCovTransP, emisP, obs, f, b);
+  const double px = ForwardBackwards(startP, covCovTransP, clipCovCovTransP, emisP, obs, f, b, Pn , Pcl);
 
   assert(nObs==nclObs);
 
@@ -2735,7 +2740,7 @@ int hmcnc(Parameters& params) {
     vector<vector<double>> f;
     vector<vector<double>> b;
     for (size_t i = 0; i < covBins.size(); ++i) {
-      ForwardBackwards(startP, covCovTransP, emisP, covBins[0], f, b);
+      ForwardBackwards(startP, covCovTransP, clipCovCovTransP, emisP, covBins[0], f, b, Pn[0] , Pcl[0]);
       StorePosteriorMaxIntervals(covBins[0], f, b, copyIntervals[i]);
     }
   }

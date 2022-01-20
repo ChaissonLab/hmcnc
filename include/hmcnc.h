@@ -117,10 +117,12 @@ double CSEmisP(int state, int pos,
 
 double ForwardBackwards(const std::vector<double> &startP,
                         const std::vector<std::vector<double>> &covCovTransP,
+                        const std::vector<std::vector<double>> &clipCovCovTransP,
                         const std::vector<std::vector<double>> &emisP,
                         const std::vector<int> &obs,
                         std::vector<std::vector<double>> &f,
-                        std::vector<std::vector<double>> &b);
+                        std::vector<std::vector<double>> &b,
+                        std::vector<double> &Pn, std::vector<double> &Pcl);
 
 int GetRefAndAlt(char refNuc, const std::vector<int> &counts,
                  int &ref, int &alt);
