@@ -2464,8 +2464,8 @@ int hmcnc(Parameters& params) {
       prN = pdf(distributionClip, clipBins[c][b]);
       prN = max(10E-9,prN);
 
-      Pn[c][b] = (log(prN));
-      Pcl[c][b] = (log(1-prN));
+      Pn[c].push_back(log(prN));
+      Pcl[c].push_back(log(1-prN));
     }
   }
 
@@ -2626,7 +2626,8 @@ int hmcnc(Parameters& params) {
   std::cerr<<"scaler3: "<<scaler3<<"\tscaler1: "<<scaler1<<std::endl;
   std::cerr<<"beta_p3: "<<beta<<" beta_nb3: "<<beta_nb<<std::endl;
   std::cerr<<"beta_p1: "<<beta1<<" beta_nb1: "<<beta_nb1<<std::endl;
-  std::cerr<<"Using beta: "<<beta_new<<std::endl;
+  std::cerr<<"Using neutral beta: "<<beta_new<<std::endl;
+  std::cerr<<"Using clipped beta: "<<clipBeta<<std::endl;
 
 
   const int nSNVStates=3;
