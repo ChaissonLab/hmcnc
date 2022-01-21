@@ -2182,7 +2182,7 @@ int hmcnc(Parameters& params) {
   vector<vector<SNV>> snvs;
   vector<vector<int>> copyNumber;
   vector< vector<double>> fCov, bCov, fSNV, bSNV;
-  vector<vector<double>> emisP , Pcl, Pn;
+  vector<vector<double>> emisP;
   vector<vector<double>> updateEmisP;
   vector<vector<vector< double>>> binoP;
   vector<vector<double>> expCovCovTransP, expCovSnvTransP, expSnvSnvTransP, expEmisP;
@@ -2253,6 +2253,12 @@ int hmcnc(Parameters& params) {
 
   vector<vector<Interval>> delT;
   delT.resize(contigNames.size());
+
+  
+  vector<vector<double>> Pcl, Pn;
+
+  Pn.resize(contigNames.size());
+  Pcl.resize(contigNames.size());
 
   vector<vector<Interval>> MdelT;
   MdelT.resize(contigNames.size());
@@ -2354,8 +2360,6 @@ int hmcnc(Parameters& params) {
 
   if (params.clipInFileName == "") {
     clipBins.resize(contigLengths.size());
-    Pn.resize(contigLengths.size());
-    Pcl.resize(contigLengths.size());
     for (size_t c=0; c < contigLengths.size(); c++ ) {
       clipBins[c].resize(contigLengths[c]/BIN_LENGTH);
       Pn[c].resize(contigLengths[c]/BIN_LENGTH);    
@@ -2460,7 +2464,6 @@ int hmcnc(Parameters& params) {
   
   for (auto c=0 ;c < contigNames.size(); c++) {
     for (auto b=0 ;b < clipBins[c].size(); b++) {
-
       prN = pdf(distributionClip, clipBins[c][b]);
       prN = max(10E-9,prN);
 
