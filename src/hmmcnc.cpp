@@ -2620,7 +2620,7 @@ int hmcnc(Parameters& params) {
 
   const double beta_new = 100 * lepsi23_nb;
 
-  const double clipBeta = 10 * lepsi23_nb;
+  const double clipBeta = 100 * lepsi23_nb;
 
   std::cerr<<"empirical lepsi23: "<<lepsi23_emp<<" empirical lepsi21: "<<lepsi21_emp<<std::endl;
  // std::cerr<<"negBin lepsi23: "<<lepsi23_nb<<" negBin lepsi21: "<<lepsi21_nb<<std::endl;
