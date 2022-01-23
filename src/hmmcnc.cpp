@@ -1830,7 +1830,6 @@ void InitParams(vector<vector<double>> &covCovTransP,
   covCovTransP.resize(nCovStates);
   clipCovCovTransP.resize(nCovStates);
 
-  //const double Diag = log(  1 -  (  exp(beta)   * (nCovStates-1)) );
 
   const double Diag1 = log(  1 -  (  exp(beta)   * (nCovStates-3)) + exp(epsi23) + exp(epsi12)  );
 
@@ -1850,20 +1849,20 @@ void InitParams(vector<vector<double>> &covCovTransP,
     for (int j=0;j<nCovStates;j++) {
       if (i==0)
       {//leaving del state
-        if (j==0){
-          covCovTransP[i][j] = Diag0 - log(2);
+        if (i==j){
+          covCovTransP[i][j] = diag;// Diag0 - log(2);
           clipCovCovTransP[i][j] = clDiag0 - log(2);
         }
         else if(j==1){
-          covCovTransP[i][j] = epsi12;
+          covCovTransP[i][j] = offDiag;// epsi12;
           clipCovCovTransP[i][j] = epsi12;
         }
         else if(j==2){
-          covCovTransP[i][j] = Diag0 - log(2);
+          covCovTransP[i][j] = offDiag;//Diag0 - log(2);
           clipCovCovTransP[i][j] = clDiag0 - log(2);
         }
         else{
-          covCovTransP[i][j] = beta;
+          covCovTransP[i][j] = offDiag;//beta;
           clipCovCovTransP[i][j] = clipBeta;
         }
       }
@@ -1871,34 +1870,34 @@ void InitParams(vector<vector<double>> &covCovTransP,
       else if(i==2)
       {//leaving neutral state
         if(i==j){
-          covCovTransP[i][j] = Diag1;
+          covCovTransP[i][j] = diag;//Diag1;
           clipCovCovTransP[i][j] = clDiag1;
         }
         else if(j==1){
-          covCovTransP[i][j] = epsi12;
+          covCovTransP[i][j] = offDiag;//epsi12;
           clipCovCovTransP[i][j] = epsi12;
         }
         else if (j==3){
-          covCovTransP[i][j] = epsi23;
+          covCovTransP[i][j] = offDiag;//epsi23;
           clipCovCovTransP[i][j] = epsi23;
         }
         else{
-          covCovTransP[i][j] = beta; 
+          covCovTransP[i][j] = offDiag;//beta; 
           clipCovCovTransP[i][j] = clipBeta; 
         }
       }
       else
       {
         if(i==j){ 
-          covCovTransP[i][j] = Diag2; 
+          covCovTransP[i][j] = diag; //Diag2;
           clipCovCovTransP[i][j] = clDiag2; 
         }
         else if(j==2){
-          covCovTransP[i][j] = Diag2;
+          covCovTransP[i][j] = offDiag;//Diag2;
           clipCovCovTransP[i][j] = clDiag2;
         }
         else{
-          covCovTransP[i][j] = beta;
+          covCovTransP[i][j] = offDiag;//beta;
           clipCovCovTransP[i][j] = clipBeta;
         }
       }
