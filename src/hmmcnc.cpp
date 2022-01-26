@@ -2472,12 +2472,12 @@ int hmcnc(Parameters& params) {
     }
   }
 
-  for (auto c=0 ;c < contigNames.size(); c++) {
+ /* for (auto c=0 ;c < contigNames.size(); c++) {
     for (int i=0;i<Pcl[c].size();i++){
     std:cout<<Pn[c][i]<<"\t"<<Pcl[c][i]<<endl;
     }
   }
-
+*/
 
 
   vector<Interval> stats;
@@ -2656,7 +2656,7 @@ int hmcnc(Parameters& params) {
     double prevPX=0;
     assert(!emisP.empty());
     vector<vector<double> > prevTransP, prevEmisP;
-    for (int i=0; i < 4; i++) 
+    for (int i=0; i < 1; i++) 
     {
       prevTransP=covCovTransP;
       prevEmisP=emisP;
