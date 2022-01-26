@@ -2460,15 +2460,25 @@ int hmcnc(Parameters& params) {
  // clipMean = max( round(mean/10) , clipMean);
 
   const poisson distributionClip(clipMean);
-  double prN;
-  
+  double prN=0, prCl=0;
+  int rClipMean = std::ceil(clipMean);
+
   for (auto c=0 ;c < contigNames.size(); c++) {
     for (auto b=0 ;b < clipBins[c].size(); b++) {
-      prN = pdf(distributionClip, clipBins[c][b]);
-      prN = max(10E-9,prN);
+      int ii = max(1, clipBins[c][b] - rClipMean );
+      int ie = clipBins[c][b] + rClipMean;
+      for ( int i =ii; i <= ie; i++ ){
+
+        prN = prN + pdf(distributionClip, i);
+
+      }
+
+
+      prCl = max(10E-30,1-prN);
+
 
       Pn[c].push_back(log(prN));
-      Pcl[c].push_back(log(1-prN));
+      Pcl[c].push_back(log(prCl));
     }
   }
 
