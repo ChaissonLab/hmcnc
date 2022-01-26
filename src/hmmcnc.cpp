@@ -2455,39 +2455,35 @@ int hmcnc(Parameters& params) {
   }
 
   double clipMean = (clippingSum/clipCount);
-  cerr<<"Clip Mean: "<<clipMean<<"\nLower Threshold: "<<round(mean/10)<<endl;
-
- // clipMean = max( round(mean/10) , clipMean);
+  cerr<<"Clip Mean: "<<clipMean<<endl;
 
   const poisson distributionClip(clipMean);
-  double prN=0, prCl=0;
-  int rClipMean = std::ceil(clipMean);
+
+  double clipStd = std::sqrt(clipMean);
+  int rClipStd = ( std::ceil(clipStd) ) * 2;
 
   for (auto c=0 ;c < contigNames.size(); c++) {
     for (auto b=0 ;b < clipBins[c].size(); b++) {
-      int ii = max(1, clipBins[c][b] - rClipMean );
-      int ie = clipBins[c][b] + rClipMean;
+      double prN=0, prCl=0;     
+      int ii = max(1, clipBins[c][b] - rClipStd ); //zeroes truncated
+      int ie = clipBins[c][b] + rClipStd;
+      
       for ( int i =ii; i <= ie; i++ ){
-
         prN = prN + pdf(distributionClip, i);
-
       }
-
-
+      assert(prN<1);
       prCl = max(10E-30,1-prN);
-
-
       Pn[c].push_back(log(prN));
       Pcl[c].push_back(log(prCl));
     }
   }
 
- /* for (auto c=0 ;c < contigNames.size(); c++) {
+  for (auto c=0 ;c < contigNames.size(); c++) {
     for (int i=0;i<Pcl[c].size();i++){
     std:cout<<Pn[c][i]<<"\t"<<Pcl[c][i]<<endl;
     }
   }
-*/
+
 
 
   vector<Interval> stats;
