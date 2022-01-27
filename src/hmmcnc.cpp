@@ -648,10 +648,13 @@ double BaumWelchEOnChrom(const vector<double> &startP,
 
   const int nStates = static_cast<int>(startP.size());
   const int nObs = obs.size();
-  const int nclObs = Pn.size();
+  const int nclObs = Pcl.size();
+  const int nNObs = Pn.size();
 
   const double px = ForwardBackwards(startP, covCovTransP, clipCovCovTransP, emisP, obs, f, b, Pn , Pcl);
 
+  cerr<<"cl,n,obs\t"<<nclObs<<"\t"<<nNObs<<"\t"<<nObs<<endl;
+  assert(nNObs==nclObs);
   assert(nObs==nclObs);
 
   for (int k=1; k< nObs-1; k++) {
@@ -1784,38 +1787,6 @@ int EstimateCoverage(const string &bamFileName,
 
 
 
-/*
-      if(i==2){//leaving normal state
-        if(j==1){
-          covCovTransP[i][j]=epsi12;
-        }
-        else if(j==3){
-          covCovTransP[i][j]=beta;
-        }
-        else if (j!=2){
-          covCovTransP[i][j]=offDiag;
-        }
-        else{
-          covCovTransP[i][j]=Diag;
-        }
-      }
-      else{
-        if(i==j) {
-          covCovTransP[i][j]  = diag; //log(1 - std::exp(beta) );
-        }
-        else {
-        covCovTransP[i][j] = offDiag;
-        }
-      }
-
-*/
-
-  /*
-      if(i<j){covCovTransP[i][j]=beta;}
-      else if(i==j){covCovTransP[i][j]=log(1 - (i*exp(epsi12)) + (exp(beta)*((nCovStates-1)-i)));}
-      else{covCovTransP[i][j]=epsi12;}
-  */
-
 void InitParams(vector<vector<double>> &covCovTransP,
                 vector<vector<double>> &clipCovCovTransP,                
                 vector<vector<double>> &covSnvTransP,
@@ -2315,12 +2286,9 @@ int hmcnc(Parameters& params) {
     threadInfo[procIndex].var = var;
     threadInfo[procIndex].hmmChrom = params.hmmChrom;
     threadInfo[procIndex].transP = &covCovTransP;
-
     threadInfo[procIndex].clTransP = &clipCovCovTransP;
-    
     threadInfo[procIndex].cl = &Pcl;
     threadInfo[procIndex].n = &Pn;
-
     threadInfo[procIndex].expTransP = &expCovCovTransP;
     threadInfo[procIndex].expEmisP = &expEmisP;
     threadInfo[procIndex].emisP = &emisP;
@@ -2478,12 +2446,13 @@ int hmcnc(Parameters& params) {
     }
   }
 
+/*
   for (auto c=0 ;c < contigNames.size(); c++) {
     for (int i=0;i<Pcl[c].size();i++){
     std:cout<<Pn[c][i]<<"\t"<<Pcl[c][i]<<endl;
     }
   }
-
+*/
 
 
   vector<Interval> stats;
@@ -2650,7 +2619,10 @@ int hmcnc(Parameters& params) {
 	       nStates, nSNVStates, log(1-exp(small)), log(exp(small)/(nStates-1)),
          beta_new, clipBeta, lepsi21_emp, beta_nb,
 	       emisP, params.model, maxCov, mean, var, binoP);
+    
+    cerr<<"Neutral\n"<<endl;
     printModel(covCovTransP, &cerr);
+    cerr<<"\nClipped\n"<<endl;    
     printModel(clipCovCovTransP, &cerr);
     
     //    printEmissions(emisP);
