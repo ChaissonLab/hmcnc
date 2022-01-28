@@ -1478,11 +1478,11 @@ void ParseChrom(ThreadInfo *threadInfo) {
           frontClipLen=bam_cigar_oplen(cigar[1]);
         }
 
-        if (nCigar > 0 and bam_cigar_op(cigar[nCigar-1]) == BAM_CSOFT_CLIP) {
+        if (nCigar > 1 and bam_cigar_op(cigar[nCigar-1]) == BAM_CSOFT_CLIP) {
           backClip=nCigar-1;
           backClipLen=bam_cigar_oplen(cigar[nCigar-1]);
         }
-        else if (nCigar > 0 and nCigar > 2 and bam_cigar_op(cigar[nCigar-2]) == BAM_CSOFT_CLIP) {
+        else if (nCigar > 2 and bam_cigar_op(cigar[nCigar-2]) == BAM_CSOFT_CLIP) {
           backClip=nCigar-2;
           backClipLen=bam_cigar_oplen(cigar[nCigar-2]);
         }
