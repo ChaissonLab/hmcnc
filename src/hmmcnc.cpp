@@ -653,7 +653,6 @@ double BaumWelchEOnChrom(const vector<double> &startP,
 
   const double px = ForwardBackwards(startP, covCovTransP, clipCovCovTransP, emisP, obs, f, b, Pn , Pcl);
 
-  cerr<<"cl,n,obs\t"<<nclObs<<"\t"<<nNObs<<"\t"<<nObs<<endl;
   assert(nNObs==nclObs);
   assert(nObs==nclObs);
 
@@ -2087,6 +2086,8 @@ Parameters::Parameters()
     group(outputGroupName)->
     type_name("FILE");
 
+
+
   //
   // Post-parsing sanity checks
   //
@@ -2431,6 +2432,8 @@ int hmcnc(Parameters& params) {
   int rClipStd = ( std::ceil(clipStd) ) * 2;
 
   for (auto c=0 ;c < contigNames.size(); c++) {
+    Pn[c].resize(clipBins[c].size());
+    Pcl[c].resize(clipBins[c].size());
     for (auto b=0 ;b < clipBins[c].size(); b++) {
       double prN=0, prCl=0;     
       int ii = max(1, clipBins[c][b] - rClipStd ); //zeroes truncated
@@ -2441,8 +2444,8 @@ int hmcnc(Parameters& params) {
       }
       assert(prN<1);
       prCl = max(10E-30,1-prN);
-      Pn[c].push_back(log(prN));
-      Pcl[c].push_back(log(prCl));
+      Pn[c][b] = log(prN);
+      Pcl[c][b] = log(prCl);
     }
   }
 
@@ -2620,9 +2623,9 @@ int hmcnc(Parameters& params) {
          beta_new, clipBeta, lepsi21_emp, beta_nb,
 	       emisP, params.model, maxCov, mean, var, binoP);
     
-    cerr<<"Neutral\n"<<endl;
+    cerr<<"\nNeutral"<<endl;
     printModel(covCovTransP, &cerr);
-    cerr<<"\nClipped\n"<<endl;    
+    cerr<<"\nClipped"<<endl;    
     printModel(clipCovCovTransP, &cerr);
     
     //    printEmissions(emisP);
