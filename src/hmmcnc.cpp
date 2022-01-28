@@ -1412,6 +1412,10 @@ void ParseChrom(ThreadInfo *threadInfo) {
       sam_itr_querys(threadInfo->bamidx.get(), threadInfo->samHeader.get(), region.c_str()));
 
     int tid = sam_hdr_name2tid(threadInfo->samHeader.get(), contigName.c_str());
+    if (tid < 0) {
+      cerr << "ERROR. Contig " << contigName << " is not a reference sequence in the input bam." << std::endl;
+      exit(1);
+    }
     uint64_t idxTotalBases, idxTotalReads;
     hts_idx_get_stat(threadInfo->bamidx.get(), tid, &idxTotalBases, &idxTotalReads);
 
@@ -1464,6 +1468,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
         int frontClip=-1, backClip=-1;
         int frontClipLen=0;
         int backClipLen=0;
+      
         if (nCigar > 1 and bam_cigar_op(cigar[0]) == BAM_CSOFT_CLIP) {
           frontClip=0;
           frontClipLen=bam_cigar_oplen(cigar[0]);
@@ -1473,11 +1478,11 @@ void ParseChrom(ThreadInfo *threadInfo) {
           frontClipLen=bam_cigar_oplen(cigar[1]);
         }
 
-        if (frontClip > 0 and bam_cigar_op(cigar[nCigar-1]) == BAM_CSOFT_CLIP) {
+        if (nCigar > 0 and bam_cigar_op(cigar[nCigar-1]) == BAM_CSOFT_CLIP) {
           backClip=nCigar-1;
           backClipLen=bam_cigar_oplen(cigar[nCigar-1]);
         }
-        else if (frontClip > 0 and nCigar > 2 and bam_cigar_op(cigar[nCigar-2]) == BAM_CSOFT_CLIP) {
+        else if (nCigar > 0 and nCigar > 2 and bam_cigar_op(cigar[nCigar-2]) == BAM_CSOFT_CLIP) {
           backClip=nCigar-2;
           backClipLen=bam_cigar_oplen(cigar[nCigar-2]);
         }
