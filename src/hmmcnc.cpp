@@ -834,20 +834,37 @@ bool compareIntervalLength(Interval i1, Interval i2) {return (i1.end - i1.start)
 
 void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedIntervals, string contig) {
   
-  std::sort(intervals.begin(), intervals.end() , compareInterval);
+  double counter = 0;
+  vector<double> counters;
   const int n = intervals.size();
+  
+  int curIndex = -1;
+  counters.resize(n)
+
+  std::sort(intervals.begin(), intervals.end() , compareInterval);
+
   for (int i = 0; i < n - 1; i++) {
-    if ((intervals[i].start >= intervals[i + 1].start && intervals[i].start <= intervals[i + 1].end) || (intervals[i].end>= intervals[i + 1].start && intervals[i].end<= intervals[i + 1].end)) { 
+
+    if ( (intervals[i].start >= intervals[i + 1].start && intervals[i].start <= intervals[i + 1].end) || 
+      (intervals[i].end>= intervals[i + 1].start && intervals[i].end<= intervals[i + 1].end)) 
+    { 
       intervals[i + 1].start = std::min(intervals[i].start, intervals[i + 1].start);
       intervals[i + 1].end= std::max(intervals[i].end, intervals[i + 1].end);
       // Remove previous interval
       intervals[i].start = -1;
-      intervals[i].end= -1;
-    } 
+      intervals[i].end = -1;
+      counter += 1.0;
+      curIndex = i+1;
+
+    }
+    else{
+      counters[curIndex] = counter;
+      counter = 0.0;
+    }
   }
   for (int i = 0; i < n; i++) {
     if (!(intervals[i].start == -1 && intervals[i].end== -1)) {
-      mergedIntervals.push_back(Interval(intervals[i].start,intervals[i].end ,0,0.0,0.0  ));
+      mergedIntervals.push_back(Interval(intervals[i].start,intervals[i].end , 0, counters[i], 0.0  ));
     }
   }
 }
@@ -948,7 +965,7 @@ void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & cop
         copyIntervals[j].altInfo += ":DF";
         copyIntervals[j].altSample += ":1" ;        
 
-        if ( ((double) copyIntervals[j].averageCoverage) > (mean*0.25) )
+        if ( ( ((double) copyIntervals[j].averageCoverage) - ((double) mergedIntervals[i].averageCoverage) )  > (mean*0.25)   )
         {
           copyIntervals[j].copyNumber = 1;
         }
