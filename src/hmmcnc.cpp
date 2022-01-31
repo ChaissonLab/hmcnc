@@ -954,13 +954,15 @@ void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & cop
         copyIntervals[j].end = mergedIntervals[i].end;
         copyIntervals[j].altInfo += ":DF";
         copyIntervals[j].altSample += ":1" ;        
-
-        if ( ( ((double) copyIntervals[j].averageCoverage) - ((double) mergedIntervals[i].averageCoverage) )  > (mean*0.25)   )
+        double diff = ((double) copyIntervals[j].averageCoverage) - ((double) mergedIntervals[i].averageCoverage) ;
+        if ( diff  > (mean*0.25)   )
         {
           copyIntervals[j].copyNumber = 1;
+          copyIntervals[j].averageCoverage = diff;
         }
         else{
           copyIntervals[j].copyNumber = 0;
+          copyIntervals[j].averageCoverage = diff;
         }
         
         i++;j++;
