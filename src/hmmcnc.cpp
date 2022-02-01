@@ -1842,7 +1842,7 @@ void InitParams(vector<vector<double>> &covCovTransP,
       {//leaving del state
         if (i==j){
           covCovTransP[i][j] = DiagE - log(2) ;// Diag0 - log(2);
-          clipCovCovTransP[i][j] = diag - log(2); //clDiag0 - log(2);
+          clipCovCovTransP[i][j] = diag ; //clDiag0 - log(2);
         }
         else if(j==1){
           covCovTransP[i][j] = epsi23 ;// epsi12;
@@ -1850,7 +1850,7 @@ void InitParams(vector<vector<double>> &covCovTransP,
         }
         else if(j==2){
           covCovTransP[i][j] = DiagE - log(2);////Diag0 - log(2);
-          clipCovCovTransP[i][j] =  diag - log(2);//clDiag0 - log(2);
+          clipCovCovTransP[i][j] =  diag ;//clDiag0 - log(2);
         }
         else{
           covCovTransP[i][j] = epsi23 ;// //beta;
@@ -1881,11 +1881,11 @@ void InitParams(vector<vector<double>> &covCovTransP,
       {
         if(i==j){ 
           covCovTransP[i][j] = DiagE - log(2); //Diag2;
-          clipCovCovTransP[i][j] =  diag - log(2);//clDiag2; 
+          clipCovCovTransP[i][j] =  diag ;//clDiag2; 
         }
         else if(j==2){
           covCovTransP[i][j] = DiagE - log(2);////Diag2;
-          clipCovCovTransP[i][j] =  diag - log(2);//clDiag2;
+          clipCovCovTransP[i][j] =  diag ;//clDiag2;
         }
         else{
           covCovTransP[i][j] = epsi23 ;////beta;
