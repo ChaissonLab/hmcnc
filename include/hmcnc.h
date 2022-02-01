@@ -192,12 +192,12 @@ void ReadFai(const std::string faiFileName,
 void ReadParameterFile(std::istream &file, int &nStates, double &covMean,
                        double &covVar, int &maxState, int &maxCov,
                        std::vector<double> &startP,
-                       std::vector<std::vector<double>> &transP,
+                       std::vector<std::vector<double>> &transP, std::vector<std::vector<double>> &clipTransP,
                        std::vector<std::vector<double>> &emisP);
 void ReadParameterFile(const std::string &fileName, int &nStates, double &covMean,
                        double &covVar, int &maxState, int &maxCov,
                        std::vector<double> &startP,
-                       std::vector<std::vector<double>> &transP,
+                       std::vector<std::vector<double>> &transP,std::vector<std::vector<double>> &clipTransP,
                        std::vector<std::vector<double>> &emisP);
 
 void ReadSNVs(std::istream &snvFile,
