@@ -1828,6 +1828,12 @@ void InitParams(vector<vector<double>> &covCovTransP,
   
   const double clDiag0 = log(  1 -  (  exp(clipBeta)   * (nCovStates-2)) +  exp(epsi12)  );
 
+  const offDiagScaler =  log(nCovStates-2) - log(6) ;
+
+  const diagScaler = offDiagScaler + log(5);
+
+
+
   for (int i=0;i<nCovStates;i++) {
     covCovTransP[i].resize(nCovStates);
     clipCovCovTransP[i].resize(nCovStates);
@@ -1835,55 +1841,55 @@ void InitParams(vector<vector<double>> &covCovTransP,
       if (i==0)
       {//leaving del state
         if (i==j){
-          covCovTransP[i][j] = DiagE;// Diag0 - log(2);
-          clipCovCovTransP[i][j] = diag; //clDiag0 - log(2);
+          covCovTransP[i][j] = DiagE + diagScaler ;// Diag0 - log(2);
+          clipCovCovTransP[i][j] = diag + diagScaler; //clDiag0 - log(2);
         }
         else if(j==1){
-          covCovTransP[i][j] = epsi23;// epsi12;
-          clipCovCovTransP[i][j] = offDiag; //epsi12;
+          covCovTransP[i][j] = epsi23 + offDiagScaler;// epsi12;
+          clipCovCovTransP[i][j] = offDiag + offDiagScaler; //epsi12;
         }
         else if(j==2){
-          covCovTransP[i][j] = epsi23;////Diag0 - log(2);
-          clipCovCovTransP[i][j] =  offDiag;//clDiag0 - log(2);
+          covCovTransP[i][j] = epsi23 + offDiagScaler;////Diag0 - log(2);
+          clipCovCovTransP[i][j] =  offDiag + offDiagScaler;//clDiag0 - log(2);
         }
         else{
-          covCovTransP[i][j] = epsi23;// //beta;
-          clipCovCovTransP[i][j] =  offDiag;//clipBeta;
+          covCovTransP[i][j] = epsi23 + offDiagScaler;// //beta;
+          clipCovCovTransP[i][j] =  offDiag + offDiagScaler;//clipBeta;
         }
       }
 
       else if(i==2)
       {//leaving neutral state
         if(i==j){
-          covCovTransP[i][j] = DiagE;//Diag1;
-          clipCovCovTransP[i][j] =  diag;//clDiag1;
+          covCovTransP[i][j] = DiagE + diagScaler;//Diag1;
+          clipCovCovTransP[i][j] =  diag + diagScaler;//clDiag1;
         }
         else if(j==1){
-          covCovTransP[i][j] = epsi23;////epsi12;
-          clipCovCovTransP[i][j] =  offDiag;//epsi12;
+          covCovTransP[i][j] = epsi23 + offDiagScaler;////epsi12;
+          clipCovCovTransP[i][j] =  offDiag + offDiagScaler;//epsi12;
         }
         else if (j==3){
-          covCovTransP[i][j] = epsi23;////epsi23;
-          clipCovCovTransP[i][j] =  offDiag;//epsi23;
+          covCovTransP[i][j] = epsi23 + offDiagScaler;////epsi23;
+          clipCovCovTransP[i][j] =  offDiag + offDiagScaler;//epsi23;
         }
         else{
-          covCovTransP[i][j] = epsi23;////beta; 
-          clipCovCovTransP[i][j] =  offDiag;//clipBeta; 
+          covCovTransP[i][j] = epsi23 + offDiagScaler;////beta; 
+          clipCovCovTransP[i][j] =  offDiag + offDiagScaler;//clipBeta; 
         }
       }
       else
       {
         if(i==j){ 
-          covCovTransP[i][j] = DiagE; //Diag2;
-          clipCovCovTransP[i][j] =  diag;//clDiag2; 
+          covCovTransP[i][j] = DiagE + diagScaler; //Diag2;
+          clipCovCovTransP[i][j] =  diag + diagScaler;//clDiag2; 
         }
         else if(j==2){
-          covCovTransP[i][j] = epsi23;////Diag2;
-          clipCovCovTransP[i][j] =  offDiag;//clDiag2;
+          covCovTransP[i][j] = epsi23 + offDiagScaler;////Diag2;
+          clipCovCovTransP[i][j] =  offDiag + offDiagScaler;//clDiag2;
         }
         else{
-          covCovTransP[i][j] = epsi23;////beta;
-          clipCovCovTransP[i][j] =  offDiag;//clipBeta;
+          covCovTransP[i][j] = epsi23 + offDiagScaler;////beta;
+          clipCovCovTransP[i][j] =  offDiag + offDiagScaler;//clipBeta;
         }
       }
     }
