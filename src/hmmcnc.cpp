@@ -1841,16 +1841,16 @@ void InitParams(vector<vector<double>> &covCovTransP,
       if (i==0)
       {//leaving del state
         if (i==j){
-          covCovTransP[i][j] = DiagE + stayScaler ;// Diag0 - log(2);
-          clipCovCovTransP[i][j] = diag + stayScaler; //clDiag0 - log(2);
+          covCovTransP[i][j] = DiagE - log(2) ;// Diag0 - log(2);
+          clipCovCovTransP[i][j] = diag - log(2); //clDiag0 - log(2);
         }
         else if(j==1){
           covCovTransP[i][j] = epsi23 ;// epsi12;
           clipCovCovTransP[i][j] = offDiag ; //epsi12;
         }
         else if(j==2){
-          covCovTransP[i][j] = DiagE + neutralScaler;////Diag0 - log(2);
-          clipCovCovTransP[i][j] =  diag + neutralScaler;//clDiag0 - log(2);
+          covCovTransP[i][j] = DiagE - log(2);////Diag0 - log(2);
+          clipCovCovTransP[i][j] =  diag - log(2);//clDiag0 - log(2);
         }
         else{
           covCovTransP[i][j] = epsi23 ;// //beta;
@@ -1880,12 +1880,12 @@ void InitParams(vector<vector<double>> &covCovTransP,
       else
       {
         if(i==j){ 
-          covCovTransP[i][j] = DiagE + stayScaler; //Diag2;
-          clipCovCovTransP[i][j] =  diag + stayScaler;//clDiag2; 
+          covCovTransP[i][j] = DiagE - log(2); //Diag2;
+          clipCovCovTransP[i][j] =  diag - log(2);//clDiag2; 
         }
         else if(j==2){
-          covCovTransP[i][j] = DiagE + neutralScaler;////Diag2;
-          clipCovCovTransP[i][j] =  diag + neutralScaler;//clDiag2;
+          covCovTransP[i][j] = DiagE - log(2);////Diag2;
+          clipCovCovTransP[i][j] =  diag - log(2);//clDiag2;
         }
         else{
           covCovTransP[i][j] = epsi23 ;////beta;
