@@ -197,7 +197,7 @@ void ReadParameterFile(std::istream &file, int &nStates, double &covMean,
 void ReadParameterFile(const std::string &fileName, int &nStates, double &covMean,
                        double &covVar, int &maxState, int &maxCov,
                        std::vector<double> &startP,
-                       std::vector<std::vector<double>> &transP,std::vector<std::vector<double>> &clipTransP,
+                       std::vector<std::vector<double>> &transP, std::vector<std::vector<double>> &clipTransP,
                        std::vector<std::vector<double>> &emisP);
 
 void ReadSNVs(std::istream &snvFile,
@@ -217,7 +217,7 @@ void WriteCovBed(const std::string &covFileName,
 void WriteParameterFile(std::ostream &file, int nStates, double covMean,
                         double covVar, int maxState, int maxCov,
                         const std::vector<double> &startP,
-                        const std::vector<std::vector<double>> &transP,
+                        const std::vector<std::vector<double>> &transP, std::vector<std::vector<double>> &clipTransP,
                         const std::vector<std::vector<double>> &emisP);
 void WriteParameterFile(const std::string &fileName, int nStates, double covMean,
                         double covVar, int maxState, int maxCov,
