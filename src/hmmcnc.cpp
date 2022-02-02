@@ -672,7 +672,7 @@ double BaumWelchEOnChrom(const vector<double> &startP,
       for (size_t j=0; j < covCovTransP[i].size(); j++) {
         noClipSum = covCovTransP[i][j] + Pn[k];
         clipSum = clipCovCovTransP[i][j] + Pcl[k] ;
-        logClipSum = PairSumOfLogP(logSum, f[i][k] + clipSum + emisP[j][obs[k+1]] + b[j][k+1]);
+        logClipSum = PairSumOfLogP(logClipSum, f[i][k] + clipSum + emisP[j][obs[k+1]] + b[j][k+1]);
 	      logNoClipSum = PairSumOfLogP(logNoClipSum, f[i][k] + noClipSum + emisP[j][obs[k+1]] + b[j][k+1]);
       }
     }
