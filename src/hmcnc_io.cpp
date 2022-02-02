@@ -148,7 +148,7 @@ void ReadParameterFile(std::istream& inFile, int &nStates, double &covMean,
   //
   inFile >> section >> nr >> nc;
   if (section != "clipTransP") {
-    std::cerr << "ERROR. Parameter file: expected clip transP section, found '"
+    std::cerr << "ERROR. Parameter file: expected clipTransP section, found '"
               << section << "' instead.\n";
     exit(EXIT_FAILURE);
   }

@@ -1805,12 +1805,17 @@ void InitParams(vector<vector<double>> &covCovTransP,
                 vector<vector<double>> &covSnvTransP,
                 vector<vector<double>> &snvSnvTransP,
                 int nCovStates, int nSNVStates,
-                double diag, double offDiag, 
+                int small, 
                 double beta, double clipBeta, double epsi12, double epsi23, 
                 vector<vector<double>> &emisP,
                 int model, int maxCov, double mean, double var,
                 vector<vector<vector<double>>> &binoP) 
 {  
+  
+  double diag = log(1-exp(small));
+  double offDiag = log(exp(small)/(nCovStates-2));
+  double offDiagN = log(exp(small)/(nCovStates-1));
+  
   covCovTransP.resize(nCovStates);
   clipCovCovTransP.resize(nCovStates);
 
@@ -1841,16 +1846,16 @@ void InitParams(vector<vector<double>> &covCovTransP,
       if (i==0)
       {//leaving del state
         if (i==j){
-          covCovTransP[i][j] = DiagE - log(2) ;// Diag0 - log(2);
-          clipCovCovTransP[i][j] = diag ; //clDiag0 - log(2);
+          covCovTransP[i][j] = DiagE  ;// Diag0 - log(2);
+          clipCovCovTransP[i][j] = diag - log(2); //clDiag0 - log(2);
         }
         else if(j==1){
           covCovTransP[i][j] = epsi23 ;// epsi12;
           clipCovCovTransP[i][j] = offDiag ; //epsi12;
         }
         else if(j==2){
-          covCovTransP[i][j] = DiagE - log(2);////Diag0 - log(2);
-          clipCovCovTransP[i][j] =  diag ;//clDiag0 - log(2);
+          covCovTransP[i][j] = epsi23 ;////Diag0 - log(2);
+          clipCovCovTransP[i][j] =  diag - log(2) ;//clDiag0 - log(2);
         }
         else{
           covCovTransP[i][j] = epsi23 ;// //beta;
@@ -1880,11 +1885,11 @@ void InitParams(vector<vector<double>> &covCovTransP,
       else
       {
         if(i==j){ 
-          covCovTransP[i][j] = DiagE - log(2); //Diag2;
+          covCovTransP[i][j] = DiagE ; //Diag2;
           clipCovCovTransP[i][j] =  diag ;//clDiag2; 
         }
         else if(j==2){
-          covCovTransP[i][j] = DiagE - log(2);////Diag2;
+          covCovTransP[i][j] = epsi23;////Diag2;
           clipCovCovTransP[i][j] =  diag ;//clDiag2;
         }
         else{
@@ -2200,7 +2205,7 @@ int hmcnc(Parameters& params) {
   if (params.paramInFile != "") {
      ReadParameterFile(params.paramInFile, nStates,
 		       mean, var, maxState, maxCov,
-		       startP, covCovTransP, emisP);
+		       startP, covCovTransP, clipCovCovTransP, emisP);
   }
 
   //
@@ -2639,7 +2644,7 @@ int hmcnc(Parameters& params) {
 
   if (params.paramInFile == "") {
     InitParams(covCovTransP, clipCovCovTransP, covSnvTransP, snvSnvTransP,
-	       nStates, nSNVStates, log(1-exp(small)), log(exp(small)/(nStates-1)),
+	       nStates, nSNVStates, small,
          beta_new, clipBeta, lepsi21_emp, beta_nb,
 	       emisP, params.model, maxCov, mean, var, binoP);
     
