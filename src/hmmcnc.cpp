@@ -591,7 +591,7 @@ double ForwardBackwards(const vector<double> &startP,
       b[i][k] = colSum;
     }
   }
- 
+
   double finalCol=0;
   for (int j=0; j < nCovStates; j++) {
     finalCol = PairSumOfLogP(finalCol, f[j][totObs]+log(1.0/nCovStates));
@@ -624,7 +624,7 @@ void ApplyPriorToTransP(vector<vector<int> > &f,
     for (int i=0; i < nStates; i++) {
       expCovCovTransP[i][i] += nBins*10;
     }
-    
+
     //      for (int j=0; j < nStates; j++) {
     //	expCovCovTransP[i][j] += nBins* prior[i][j] * 10;
     //      }
@@ -637,12 +637,13 @@ void ApplyPriorToTransP(vector<vector<int> > &f,
 
 double BaumWelchEOnChrom(const vector<double> &startP,
 			 vector<vector<double>> &covCovTransP,
-       vector<vector<double>> &clipCovCovTransP,       
+			 vector<vector<double>> &clipCovCovTransP,
 			 vector<vector<double>> &emisP,
 			 vector<int> &obs,
 			 vector<vector<double>> &f,
 			 vector<vector<double>> &b,
-			 vector<vector<double>> &expCovCovTransP,
+			 vector<vector<double>> &expCovCovNoClipTransP,
+			 vector<vector<double>> &expCovCovClipTransP,
 			 vector<vector<double>> &expEmisP,
        vector<double> &Pn, vector<double> &Pcl) {
 
@@ -659,21 +660,27 @@ double BaumWelchEOnChrom(const vector<double> &startP,
   for (int k=1; k< nObs-1; k++) {
     double logSum = 0;
     double clipSum = 0;
+    double noClipSum = 0;
+    double logNoClipSum = 0;
     //
     // Calculate total probability of all transitions at this step.
     //
     for (size_t i=0; i < covCovTransP.size(); i++) {
       covCovTransP[i].resize(covCovTransP[i].size());
       for (size_t j=0; j < covCovTransP[i].size(); j++) {
-        clipSum = PairSumOfLogP(covCovTransP[i][j] + Pn[k] , clipCovCovTransP[i][j] + Pcl[k] );
+        clipSum = covCovTransP[i][j] + Pn[k];
+        noClipSum = clipCovCovTransP[i][j] + Pcl[k] ;
         logSum = PairSumOfLogP(logSum, f[i][k] + clipSum + emisP[j][obs[k+1]] + b[j][k+1]);
+	logNoClipSum = PairSumOfLogP(logNoClipSum, f[i][k] + noClipSum + emisP[j][obs[k+1]] + b[j][k+1]);
       }
     }
     for (size_t i=0; i < covCovTransP.size(); i++) {
       for (size_t j=0; j < covCovTransP[i].size(); j++) {
-        double pEdge=f[i][k] + PairSumOfLogP(covCovTransP[i][j] + Pn[k] , clipCovCovTransP[i][j] + Pcl[k] ) + emisP[j][obs[k+1]] + b[j][k+1];
+        double pNoClipEdge=f[i][k] + covCovTransP[i][j] + Pn[k] + emisP[j][obs[k+1]] + b[j][k+1];
+        double pClipEdge=f[i][k] +  clipCovCovTransP[i][j] + Pcl[k] + emisP[j][obs[k+1]] + b[j][k+1];
         assert(isnan(exp(pEdge-logSum)) == false);
-        expCovCovTransP[i][j] += exp(pEdge - logSum);
+        expCovCovNoClipTransP[i][j] += exp(pNoClipEdge - logNoClipSum);
+        expCovCovClipTransP[i][j] += exp(clipSum - logSum);
       }
     }
   }
@@ -828,9 +835,9 @@ void StorePosteriorMaxIntervals(const vector<int> &cov,
 }
 
 
-bool compareInterval(Interval i1, Interval i2) {return (i1.start < i2.start);} 
+bool compareInterval(Interval i1, Interval i2) {return (i1.start < i2.start);}
 
-bool compareIntervalLength(Interval i1, Interval i2) {return (i1.end - i1.start) < (i2.end - i2.start);} 
+bool compareIntervalLength(Interval i1, Interval i2) {return (i1.end - i1.start) < (i2.end - i2.start);}
 
 void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedIntervals, string contig) {
   
@@ -862,18 +869,18 @@ void mergeIntervals(vector<Interval> & intervals, vector<Interval> &mergedInterv
 
 
 void mergeNaiveIntervals(vector<Interval> &intervals, vector<Interval> &mergedIntervals, string contig) {
-  
+
   //std::sort(intervals.begin(), intervals.end() , compareInterval);
   const int n = intervals.size();
   for (int i = 0; i < n - 1; i++) {
- 
-    if ( ((intervals[i].start >= intervals[i + 1].start && intervals[i].start <= intervals[i + 1].end) || (intervals[i].end>= intervals[i + 1].start && intervals[i].end<= intervals[i + 1].end)) && intervals[i].copyNumber == intervals[i+1].copyNumber ) { 
+
+    if ( ((intervals[i].start >= intervals[i + 1].start && intervals[i].start <= intervals[i + 1].end) || (intervals[i].end>= intervals[i + 1].start && intervals[i].end<= intervals[i + 1].end)) && intervals[i].copyNumber == intervals[i+1].copyNumber ) {
       intervals[i + 1].start = std::min(intervals[i].start, intervals[i + 1].start);
       intervals[i + 1].end= std::max(intervals[i].end, intervals[i + 1].end);
       // Remove previous interval
       intervals[i].start = -1;
       intervals[i].end= -1;
-    } 
+    }
   }
   for (int i = 0; i < n; i++) {
     if (!(intervals[i].start == -1 && intervals[i].end== -1)) {
@@ -901,7 +908,7 @@ void quant( vector<vector<Interval>> & mergedIntervals ,double q, vector<string>
   const int idx3= (int)(q * lens3.size());
   const int idx1_5 = (int)(0.5 * lens1.size());
   const int idx3_5 = (int)(0.5 * lens1.size());
-  
+
   stats.push_back(lens3[idx3]);
   stats.push_back(lens1[idx1]);
 
@@ -927,12 +934,12 @@ void NaiveCaller(vector<int> &covBins, vector<Interval> & UnmergedNaiveIntervals
 
 void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & copyIntervals, double mean)
 {
- 
+
   int i = 0, j = 0;
   int n = mergedIntervals.size(), m = copyIntervals.size();
   //std::sort(copyIntervals.begin(), copyIntervals.end() , compareInterval);
 
-  while (i < n && j < m) 
+  while (i < n && j < m)
   {
     if (copyIntervals[j].copyNumber > 1 )
     {
@@ -966,7 +973,7 @@ void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & cop
         }
         
         i++;j++;
-      
+
       }
       else if (mergedIntervals[i].end < copyIntervals[j].end)
       {
@@ -1018,10 +1025,12 @@ void BaumWelchM(const vector<double> &startP,
 		int model,
 		const vector<long> &stateTotCov,
 		const vector<long> &stateNCov,
-		const vector<vector<double>> &expTransP,
+		const vector<vector<double>> &expNoClipTransP,
+		const vector<vector<double>> &expClipTransP,
 		vector<vector<double>> &expEmisP,
 		vector<vector<double>> &covCovPrior,
-		vector<vector<double>> &updateTransP,
+		vector<vector<double>> &updateNoClipTransP,
+		vector<vector<double>> &updateClipTransP,
 		vector<vector<double>> &updateEmisP) {
 
   //
@@ -1039,8 +1048,10 @@ void BaumWelchM(const vector<double> &startP,
   cerr << '\n';
   */
   for (int j=0; j < nStates; j++) {
-    double colSum=0;
-    updateTransP[j].resize(nStates);
+    double noClipColSum=0;
+    double clipColSum=0;
+    noClipUpdateTransP[j].resize(nStates);
+    clipUpdateTransP[j].resize(nStates);
     assert(nStates <= expTransP[j].size());
     for (int k=0; k< nStates; k++) {
       colSum +=expTransP[j][k]; //PairSumOfLogP(colSum, expTransP[j][k]);
@@ -1048,7 +1059,7 @@ void BaumWelchM(const vector<double> &startP,
     colSums.push_back(colSum);
     cerr << j;
     for (int k=0; k < nStates; k++) {
-      updateTransP[j][k] = log(expTransP[j][k]/colSum); //min(ONE, expTransP[j][k] - colSum);
+      updateNoClipTransP[j][k] = log(expTransP[j][k]/colSum); //min(ONE, expTransP[j][k] - colSum);
       //      cerr << '\t' << std::setw(8) << updateTransP[j][k];
     }
     //    cerr << '\n';
@@ -1318,7 +1329,7 @@ int IncrementCounts(bam1_t *b, int contigLength,
 void ThreadedBWE(ThreadInfo *threadInfo) {
   double pChrom;
   while (*(threadInfo->lastSeq) < (*(*threadInfo).contigNames).size()) {
-    
+
     pthread_mutex_lock(threadInfo->semaphore);
 
     const int curSeq = *((*threadInfo).lastSeq);
@@ -1333,7 +1344,7 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
     if ((*(*threadInfo).averageCoverage)[curSeq] == 0) {
       break;
     }
-    
+
     vector<vector<double>> f, b, expCovCovTransP, expEmisP;
     expCovCovTransP.resize(threadInfo->transP->size());
     for (int i=0; i < expCovCovTransP.size(); i++) {
@@ -1346,7 +1357,7 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
 
     pChrom = BaumWelchEOnChrom(*threadInfo->startP,
                                 *threadInfo->transP,
-                                *threadInfo->clTransP,             
+                                *threadInfo->clTransP,
                                 *threadInfo->emisP,
                                 (*threadInfo->covBins)[curSeq],
                                 f, b,
@@ -1359,7 +1370,7 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
     //
     pthread_mutex_lock(threadInfo->semaphore);
     if ((*threadInfo->chromCopyNumber)[curSeq] >= 1.5 and
-	  (*threadInfo->chromCopyNumber)[curSeq] < 2.5) 
+	  (*threadInfo->chromCopyNumber)[curSeq] < 2.5)
     {
       for (size_t i=0; i < threadInfo->transP->size(); i++) {
 	      for (size_t j=0; j < (*threadInfo->transP)[i].size(); j++) {
@@ -1393,7 +1404,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
       pthread_mutex_unlock(threadInfo->semaphore);
       break;
     }
-    
+
     *(threadInfo->lastSeq) = *(threadInfo->lastSeq) + 1;
     (*(*threadInfo).totalReads)[curSeq] = 0;
     (*(*threadInfo).totalBases)[curSeq] = 0;
@@ -1604,14 +1615,14 @@ void ChromCopyNumber(const vector<vector<int>> &allCovBins,
   }
 }
 
-    
+
 int EstimateCoverage(const string &bamFileName,
                      const vector<vector<int>> &allCovBins,
                      const vector<string> &chroms,
                      const vector<int> &lengths,
                      string &useChrom,
                      double &mean,
-                     double &var) 
+                     double &var)
 {
   size_t useChromIndex=0;
   if (useChrom == "") {
@@ -1805,12 +1816,12 @@ void InitParams(vector<vector<double>> &covCovTransP,
                 vector<vector<double>> &covSnvTransP,
                 vector<vector<double>> &snvSnvTransP,
                 int nCovStates, int nSNVStates,
-                double diag, double offDiag, 
-                double beta, double clipBeta, double epsi12, double epsi23, 
+                double diag, double offDiag,
+                double beta, double clipBeta, double epsi12, double epsi23,
                 vector<vector<double>> &emisP,
                 int model, int maxCov, double mean, double var,
-                vector<vector<vector<double>>> &binoP) 
-{  
+                vector<vector<vector<double>>> &binoP)
+{
   covCovTransP.resize(nCovStates);
   clipCovCovTransP.resize(nCovStates);
 
@@ -1819,7 +1830,7 @@ void InitParams(vector<vector<double>> &covCovTransP,
   const double Diag1 = log(  1 -  (  exp(beta)   * (nCovStates-3)) + exp(epsi23) + exp(epsi12)  );
 
   const double Diag2 = log(  (1 -  (  exp(beta)   * (nCovStates-2)) /2)) ;
-  
+
   const double Diag0 = log(  1 -  (  exp(beta)   * (nCovStates-2)) +  exp(epsi12)  );
 
   const double clDiag1 = log(  1 -  (  exp(clipBeta)   * (nCovStates-3)) + exp(epsi23) + exp(epsi12)  );
@@ -2100,7 +2111,7 @@ Parameters::Parameters()
   CLI.add_option("--writeFail", writeFail,
     "Write calls flagged as FAIL.")->
     group(outputGroupName)->type_name("");
-  
+
   CLI.add_option("--bed", outBedName,
     "Output calls in bed format to this file.")->
     group(outputGroupName)->
@@ -2351,9 +2362,9 @@ int hmcnc(Parameters& params) {
     clipBins.resize(contigLengths.size());
     for (size_t c=0; c < contigLengths.size(); c++ ) {
       clipBins[c].resize(contigLengths[c]/BIN_LENGTH);
-      Pn[c].resize(contigLengths[c]/BIN_LENGTH);    
-      Pcl[c].resize(contigLengths[c]/BIN_LENGTH);    
-        
+      Pn[c].resize(contigLengths[c]/BIN_LENGTH);
+      Pcl[c].resize(contigLengths[c]/BIN_LENGTH);
+
     }
   }
   if (params.covBedInFileName == "") {
@@ -2416,15 +2427,15 @@ int hmcnc(Parameters& params) {
     MODEL_TYPE model=POIS;
     std::cerr<<"Mean is approximately equal to variance, Model switched to Poisson."<<std::endl;
   }
-  
 
-    
+
+
 
   ChromCopyNumber(covBins, mean,chromCopyNumber);
 
 
   double clippingSum = 0;
-  double clipCount = 0; 
+  double clipCount = 0;
   for (auto c=0 ;c < contigNames.size(); c++) {
     if (chromCopyNumber[c] > 1.5 and chromCopyNumber[c] < 2.5) {
       NaiveCaller(covBins[c], UnmergedNaiveIntervals[c], mean );
@@ -2434,7 +2445,7 @@ int hmcnc(Parameters& params) {
         if (clipBins[c][i]>0){
           clippingSum+=clipBins[c][i];
           clipCount+=1;
-        } 
+        }
       }
 
     }
@@ -2484,7 +2495,7 @@ int hmcnc(Parameters& params) {
   double epsi23_emp=0;
   double epsi3_emp=0;
   double epsi1_emp=0;
-  
+
   const int cn3quant = (int) (stats[0].end-stats[0].start)/BIN_LENGTH;
   const size_t contigg3 = (size_t) stats[0].averageCoverage;
   const int end3 = (int) stats[0].end/BIN_LENGTH;
@@ -2532,7 +2543,7 @@ int hmcnc(Parameters& params) {
 
       }
     }
-  
+
   }
   */
 
@@ -2657,7 +2668,7 @@ int hmcnc(Parameters& params) {
     double prevPX=0;
     assert(!emisP.empty());
     vector<vector<double> > prevTransP, prevEmisP;
-    for (int i=0; i < 1; i++) 
+    for (int i=0; i < 4; i++)
     {
       prevTransP=covCovTransP;
       prevEmisP=emisP;
@@ -2719,7 +2730,7 @@ int hmcnc(Parameters& params) {
 
       printModel(updateTransP, &cerr);
       covCovTransP=updateTransP;
-  
+
 
       if (params.paramOutFile != "") {
         string s = std::to_string(i);
@@ -2727,7 +2738,7 @@ int hmcnc(Parameters& params) {
         WriteParameterFile( outName , nStates, mean, var, maxState, maxCov, startP, covCovTransP, emisP);
       }
 
-    
+
     }
 
 
@@ -2834,10 +2845,10 @@ int hmcnc(Parameters& params) {
   //
   for (auto c=0; c < copyIntervals.size(); c++) {
     for (auto i=0; i < copyIntervals[c].size(); i++) {
-      
+
       int intvStart = copyIntervals[c][i].start/100;
       int intvEnd   = copyIntervals[c][i].end/100;
-      if (copyIntervals[c][i].copyNumber >= MAX_CN-2) {	
+      if (copyIntervals[c][i].copyNumber >= MAX_CN-2) {
 	double intvCoverage = std::accumulate(&origCovBins[c][intvStart], &origCovBins[c][intvEnd], 0);
 	double cnReal = 2*intvCoverage / ((intvEnd-intvStart)*mean);
 	int cn=round(cnReal);
@@ -2857,7 +2868,7 @@ int hmcnc(Parameters& params) {
   else {
     outPtr = &cout;
   }
-  
+
   WriteVCF(*outPtr, params.referenceName, params.sampleName, contigNames, contigLengths, copyIntervals, writeFail);
 
   if (params.outBedName != "") {
