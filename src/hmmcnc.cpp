@@ -270,7 +270,7 @@ public:
 
   vector<vector<SNV>> *snvs;
   vector<vector<int>> *copyNumber;
-  vector<vector<double>> *transP, *emisP, *expTransP, *expEmisP, *clTransP;
+  vector<vector<double>> *transP, *emisP, *expTransP, *expClipTransP, *expEmisP, *clTransP;
   vector<double> *startP;
   vector<vector<Interval>> *copyIntervals;
   vector<double> *chromCopyNumber;
@@ -566,6 +566,8 @@ double ForwardBackwards(const vector<double> &startP,
         assert(k < f[j].size());
         assert(j < covCovTransP.size());
         assert(i < covCovTransP[j].size());
+        assert(j < clipCovCovTransP.size());
+        assert(i < clipCovCovTransP[j].size());
         clipSum = PairSumOfLogP(covCovTransP[i][j] + Pn[k] , clipCovCovTransP[i][j] + Pcl[k] );
         colSum = PairSumOfLogP(colSum, f[j][k] + clipSum);
       }
@@ -676,8 +678,8 @@ double BaumWelchEOnChrom(const vector<double> &startP,
     }
     for (size_t i=0; i < covCovTransP.size(); i++) {
       for (size_t j=0; j < covCovTransP[i].size(); j++) {
-        double pNoClipEdge=f[i][k] + covCovTransP[i][j] + Pn[k] + emisP[j][obs[k+1]] + b[j][k+1];
-        double pClipEdge=f[i][k] +  clipCovCovTransP[i][j] + Pcl[k] + emisP[j][obs[k+1]] + b[j][k+1];
+        double pNoClipEdge = f[i][k] + covCovTransP[i][j] + Pn[k] + emisP[j][obs[k+1]] + b[j][k+1];
+        double pClipEdge = f[i][k] +  clipCovCovTransP[i][j] + Pcl[k] + emisP[j][obs[k+1]] + b[j][k+1];
         assert(isnan(exp(pNoClipEdge - logNoClipSum)) == false);
         assert(isnan(exp(pClipEdge - logClipSum)) == false);
 
@@ -1040,8 +1042,9 @@ void BaumWelchM(const vector<double> &startP,
   // M step.
   //
   const int nStates=static_cast<int>(startP.size());
-  updateTransP.resize(nStates);
-  //vector<double> colSums;
+  updateNoClipTransP.resize(nStates);
+  updateClipTransP.resize(nStates);
+    //vector<double> colSums;
 
   /*  cerr << "Update trans: " << '\n';
     cerr << "p\t";
@@ -1056,16 +1059,17 @@ void BaumWelchM(const vector<double> &startP,
     double clipColSum=0;
     updateNoClipTransP[j].resize(nStates);
     updateClipTransP[j].resize(nStates);
-    assert(nStates <= expTransP[j].size());
+    assert(nStates <= expNoClipTransP[j].size());
+    assert(nStates <= expClipTransP[j].size());
     for (int k=0; k< nStates; k++) {
       noClipColSum += expNoClipTransP[j][k];
-      clipColSum += expClipTransP[j][k]; //PairSumOfLogP(colSum, expTransP[j][k]);
+      clipColSum += expClipTransP[j][k];
     }
 //    colSums.push_back(colSum);
     
     cerr << j;
     for (int k=0; k < nStates; k++) {
-      updateClipTransP[j][k] = log(expClipTransP[j][k]/clipColSum); //min(ONE, expTransP[j][k] - colSum);
+      updateClipTransP[j][k] = log(expClipTransP[j][k]/clipColSum); 
       updateNoClipTransP[j][k] = log(expNoClipTransP[j][k]/noClipColSum);
     }
   }
@@ -1350,8 +1354,10 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
       break;
     }
 
-    vector<vector<double>> f, b, expCovCovTransP, expEmisP;
+    vector<vector<double>> f, b, expCovCovTransP, expCovCovClipTransP, expEmisP;
     expCovCovTransP.resize(threadInfo->transP->size());
+    expCovCovClipTransP.resize(threadInfo->transP->size());
+    
     for (int i=0; i < expCovCovTransP.size(); i++) {
       expCovCovTransP[i].resize(expCovCovTransP.size(), 0);
     }
@@ -1366,7 +1372,7 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
                                 *threadInfo->emisP,
                                 (*threadInfo->covBins)[curSeq],
                                 f, b,
-                                expCovCovTransP,
+                                expCovCovTransP, expCovCovClipTransP,
                                 expEmisP,
                                 (*threadInfo->n)[curSeq], (*threadInfo->cl)[curSeq]);
 
@@ -1380,6 +1386,7 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
       for (size_t i=0; i < threadInfo->transP->size(); i++) {
 	      for (size_t j=0; j < (*threadInfo->transP)[i].size(); j++) {
 	        (*threadInfo->expTransP)[i][j] += expCovCovTransP[i][j];
+          (*threadInfo->expClipTransP)[i][j] += expCovCovClipTransP[i][j];          
         }
       }
       for (size_t i=0; i < threadInfo->emisP->size(); i++) {
@@ -2186,14 +2193,14 @@ int hmcnc(Parameters& params) {
   int maxCov;
   vector<double> startP;
   vector<vector<double>> covCovTransP, covSnvTransP, snvSnvTransP, clipCovCovTransP;
-  vector<vector<double>> updateTransP;
+  vector<vector<double>> updateTransP, updateClipTransP;
   vector<vector<SNV>> snvs;
   vector<vector<int>> copyNumber;
   vector< vector<double>> fCov, bCov, fSNV, bSNV;
   vector<vector<double>> emisP;
   vector<vector<double>> updateEmisP;
   vector<vector<vector< double>>> binoP;
-  vector<vector<double>> expCovCovTransP, expCovSnvTransP, expSnvSnvTransP, expEmisP;
+  vector<vector<double>> expCovCovTransP, expCovCovClipTransP, expCovSnvTransP, expSnvSnvTransP, expEmisP;
   vector<int> nReads;
   vector<long> totalBases;
   vector<double> averageCoverage;
@@ -2216,7 +2223,7 @@ int hmcnc(Parameters& params) {
   if (params.paramInFile != "") {
      ReadParameterFile(params.paramInFile, nStates,
 		       mean, var, maxState, maxCov,
-		       startP, covCovTransP, emisP);
+		       startP, covCovTransP, clipCovCovTransP, emisP);
   }
 
   //
@@ -2327,6 +2334,7 @@ int hmcnc(Parameters& params) {
     threadInfo[procIndex].cl = &Pcl;
     threadInfo[procIndex].n = &Pn;
     threadInfo[procIndex].expTransP = &expCovCovTransP;
+    threadInfo[procIndex].expClipTransP = &expCovCovClipTransP;
     threadInfo[procIndex].expEmisP = &expEmisP;
     threadInfo[procIndex].emisP = &emisP;
     threadInfo[procIndex].startP = &startP;
@@ -2672,11 +2680,12 @@ int hmcnc(Parameters& params) {
 
     double prevPX=0;
     assert(!emisP.empty());
-    vector<vector<double> > prevTransP, prevEmisP;
+    vector<vector<double> > prevTransP, prevClipTransP, prevEmisP;
     for (int i=0; i < 4; i++)
     {
-      prevTransP=covCovTransP;
-      prevEmisP=emisP;
+      prevTransP = covCovTransP;
+      prevEmisP = emisP;
+      prevClipTransP = clipCovCovTransP;
 
       vector<double> stateWeightedTotCov(nStates, 0),
       stateWeightedTotVar(nStates, 0),
@@ -2684,14 +2693,17 @@ int hmcnc(Parameters& params) {
       vector<long> stateTotCov(nStates, 0), stateNCov(nStates, 0);
 
       expCovCovTransP.resize(nStates);
+      expCovCovClipTransP.resize(nStates);
       expCovSnvTransP.resize(nStates);
       expSnvSnvTransP.resize(nStates);
       expEmisP.resize(nStates);
       for (int r=0; r < nStates; r++ ) {
         expCovCovTransP[r].resize(nStates,0);
+        expCovCovClipTransP[r].resize(nStates,0);
         expCovSnvTransP[r].resize(nStates,0);
         expSnvSnvTransP[r].resize(nStates,0);
         fill(expCovCovTransP[r].begin(), expCovCovTransP[r].end(), 0);
+        fill(expCovCovClipTransP[r].begin(), expCovCovClipTransP[r].end(), 0);
         expEmisP[r].resize(emisP[0].size());
       }
       double px=0;
@@ -2712,6 +2724,7 @@ int hmcnc(Parameters& params) {
       if (prevPX != 0 and px - prevPX < 100 and i > 1) {
         cerr << "Ending iteration after " << i << " steps" << '\n';
         covCovTransP = prevTransP;
+        clipCovCovTransP = prevClipTransP;
         emisP  = prevEmisP;
         break;
       }
@@ -2729,18 +2742,21 @@ int hmcnc(Parameters& params) {
       BaumWelchM(startP, covCovTransP, emisP, binoP,
         params.model,
         stateTotCov, stateNCov,
-        expCovCovTransP, expEmisP,
+        expCovCovTransP, expCovCovClipTransP, 
+        expEmisP,
         priorCovCov,
-        updateTransP, updateEmisP);
+        updateTransP, updateClipTransP, updateEmisP);
 
       printModel(updateTransP, &cerr);
+      printModel(updateClipTransP, &cerr);
       covCovTransP=updateTransP;
+      clipCovCovTransP=updateClipTransP;
 
 
       if (params.paramOutFile != "") {
         string s = std::to_string(i);
         string outName = params.paramOutFile + "." + s;
-        WriteParameterFile( outName , nStates, mean, var, maxState, maxCov, startP, covCovTransP, emisP);
+        WriteParameterFile( outName , nStates, mean, var, maxState, maxCov, startP, covCovTransP, clipCovCovTransP, emisP);
       }
 
 
@@ -2761,8 +2777,8 @@ int hmcnc(Parameters& params) {
     vector<vector<double>> f;
     vector<vector<double>> b;
     for (size_t i = 0; i < covBins.size(); ++i) {
-      ForwardBackwards(startP, covCovTransP, clipCovCovTransP, emisP, covBins[0], f, b, Pn[0] , Pcl[0]);
-      StorePosteriorMaxIntervals(covBins[0], f, b, copyIntervals[i]);
+      ForwardBackwards(startP, covCovTransP, clipCovCovTransP, emisP, covBins[i], f, b, Pn[i] , Pcl[i]);
+      StorePosteriorMaxIntervals(covBins[i], f, b, copyIntervals[i]);
     }
   }
 

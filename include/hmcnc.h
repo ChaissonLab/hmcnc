@@ -222,7 +222,7 @@ void WriteParameterFile(std::ostream &file, int nStates, double covMean,
 void WriteParameterFile(const std::string &fileName, int nStates, double covMean,
                         double covVar, int maxState, int maxCov,
                         const std::vector<double> &startP,
-                        const std::vector<std::vector<double>> &transP,
+                        const std::vector<std::vector<double>> &transP, std::vector<std::vector<double>> &clipTransP,
                         const std::vector<std::vector<double>> &emisP);
 
 void WriteSNVs(std::ostream &snvFile,
