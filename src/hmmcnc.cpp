@@ -669,6 +669,8 @@ double BaumWelchEOnChrom(const vector<double> &startP,
     //
     for (size_t i=0; i < covCovTransP.size(); i++) {
       covCovTransP[i].resize(covCovTransP[i].size());
+      clipCovCovTransP[i].resize(clipCovCovTransP[i].size());
+
       for (size_t j=0; j < covCovTransP[i].size(); j++) {
         noClipSum = covCovTransP[i][j] + Pn[k];
         clipSum = clipCovCovTransP[i][j] + Pcl[k] ;
@@ -2489,6 +2491,7 @@ int hmcnc(Parameters& params) {
         prN = prN + pdf(distributionClip, i);
       }
       assert(prN<1);
+      prN = max(10E-30, prN)
       prCl = max(10E-30,1-prN);
       Pn[c][b] = log(prN);
       Pcl[c][b] = log(prCl);
