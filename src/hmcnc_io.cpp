@@ -91,7 +91,7 @@ void ReadFai(const std::string faiFileName,
 void ReadParameterFile(std::istream& inFile, int &nStates, double &covMean,
                        double &covVar, int &maxState, int &maxCov,
                        std::vector<double> &startP,
-                       std::vector<std::vector<double>> &transP,
+                       std::vector<std::vector<double>> &transP, std::vector<std::vector<double>> &clipTransP,
                        std::vector<std::vector<double>> &emisP) {
   std::string spacer;
   std::string section;
@@ -144,6 +144,25 @@ void ReadParameterFile(std::istream& inFile, int &nStates, double &covMean,
   }
 
   //
+  // clip transP
+  //
+  inFile >> section >> nr >> nc;
+  if (section != "clipTransP") {
+    std::cerr << "ERROR. Parameter file: expected clip transP section, found '"
+              << section << "' instead.\n";
+    exit(EXIT_FAILURE);
+  }
+  clipTransP.resize(nr);
+  for (int i=0; i < nr; i++) {
+    for (int j=0; j < nc; j++) {
+      inFile >> val;
+      clipTransP[i].push_back(val);
+    }
+  }
+
+
+
+  //
   // emisP
   //
   inFile >> section >> nr >> nc;
@@ -164,11 +183,11 @@ void ReadParameterFile(std::istream& inFile, int &nStates, double &covMean,
 void ReadParameterFile(const std::string &fileName, int &nStates, double &covMean,
                        double &covVar, int &maxState, int &maxCov,
                        std::vector<double> &startP,
-                       std::vector<std::vector<double>> &transP,
+                       std::vector<std::vector<double>> &transP,std::vector<std::vector<double>> &clipTransP,
                        std::vector<std::vector<double>> &emisP) {
   std::ifstream inFile{fileName.c_str()};
   ReadParameterFile(inFile, nStates, covMean, covVar, maxState, maxCov,
-                    startP, transP, emisP);
+                    startP, transP, clipTransP, emisP);
 }
 
 void ReadSNVs(std::istream &snvIn,
