@@ -1360,6 +1360,8 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
     
     for (int i=0; i < expCovCovTransP.size(); i++) {
       expCovCovTransP[i].resize(expCovCovTransP.size(), 0);
+      expCovCovClipTransP[i].resize(expCovCovTransP.size(), 0);
+
     }
     expEmisP.resize(threadInfo->emisP->size());
     for (int i=0; i < expEmisP.size(); i++){
