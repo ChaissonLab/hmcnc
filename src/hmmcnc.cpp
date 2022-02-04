@@ -673,46 +673,26 @@ double BaumWelchEOnChrom(const vector<double> &startP,
 
       for (size_t j=0; j < covCovTransP[i].size(); j++) {
         noClipSum = covCovTransP[i][j] + Pn[k];
-        clipSum = clipCovCovTransP[i][j] + Pcl[k] ;
-        logClipSum = PairSumOfLogP(logClipSum, f[i][k] + clipSum + emisP[j][obs[k+1]] + b[j][k+1]);
-	      logNoClipSum = PairSumOfLogP(logNoClipSum, f[i][k] + noClipSum + emisP[j][obs[k+1]] + b[j][k+1]);
+        clipSum      = clipCovCovTransP[i][j] + Pcl[k] ;
+        logClipSum   = PairSumOfLogP(logClipSum, f[i][k] + clipSum + emisP[j][obs[k+1]] + b[j][k+1]);
+	logNoClipSum = PairSumOfLogP(logNoClipSum, f[i][k] + noClipSum + emisP[j][obs[k+1]] + b[j][k+1]);
+
+	
       }
     }
     for (size_t i=0; i < covCovTransP.size(); i++) {
       for (size_t j=0; j < covCovTransP[i].size(); j++) {
         double pNoClipEdge = f[i][k] + covCovTransP[i][j] + Pn[k] + emisP[j][obs[k+1]] + b[j][k+1];
-        double pClipEdge = f[i][k] +  clipCovCovTransP[i][j] + Pcl[k] + emisP[j][obs[k+1]] + b[j][k+1];
-        assert(isnan(exp(pNoClipEdge - logNoClipSum)) == false);
-        assert(isnan(exp(pClipEdge - logClipSum)) == false);
-
-        expCovCovNoClipTransP[i][j] += exp(pNoClipEdge - logNoClipSum);
-        expCovCovClipTransP[i][j] += exp(pClipEdge - logClipSum);
+        double pClipEdge   = f[i][k] +  clipCovCovTransP[i][j] + Pcl[k] + emisP[j][obs[k+1]] + b[j][k+1];
+        expCovCovNoClipTransP[i][j] = PairSumOfLogP(expCovCovNoClipTransP[i][j], pNoClipEdge - logNoClipSum);
+	expCovCovClipTransP[i][j]   = PairSumOfLogP(expCovCovClipTransP[i][j], pClipEdge - logClipSum);
+	
       }
     }
   }
-  
-  for (size_t ei=0; ei < expEmisP.size(); ei++) {
-    fill(expEmisP[ei].begin(), expEmisP[ei].end(), 0);
-  }
-
-  for (int k=1; k< nObs-1; k++) {
-    double colSum=0;
-
-    for (int j=0; j < nStates; j++) {
-      colSum=PairSumOfLogP(colSum, f[j][k] + b[j][k]);
-    }
-    for (int j=0; j < nStates; j++) {
-      expEmisP[j][obs[k+1]] += exp(f[j][k]+b[j][k] - colSum);
-    }
-  }
-  for (size_t ei=0; ei < expEmisP.size(); ei++) {
-    double rowSum=0;
-    rowSum=std::accumulate(expEmisP[ei].begin(),expEmisP[ei].end(), rowSum);
-    for (int pi=0; pi < expEmisP[ei].size(); pi++) {
-      expEmisP[ei][pi] /= rowSum;
-    }
-  }
-
+  //
+  // For now do not tune parameters for emission.
+  //
   return px;
 }
 
@@ -1065,14 +1045,14 @@ void BaumWelchM(const vector<double> &startP,
     assert(nStates <= expClipTransP[j].size());
     for (int k=0; k< nStates; k++) {
       noClipColSum += expNoClipTransP[j][k];
-      clipColSum += expClipTransP[j][k];
+      clipColSum   += expClipTransP[j][k];
     }
 //    colSums.push_back(colSum);
     
     cerr << j;
     for (int k=0; k < nStates; k++) {
-      updateClipTransP[j][k] = log(expClipTransP[j][k]/clipColSum); 
-      updateNoClipTransP[j][k] = log(expNoClipTransP[j][k]/noClipColSum);
+      updateClipTransP[j][k] = expClipTransP[j][k]- clipColSum; 
+      updateNoClipTransP[j][k] = expNoClipTransP[j][k] - noClipColSum;
     }
   }
   //
@@ -2491,7 +2471,7 @@ int hmcnc(Parameters& params) {
         prN = prN + pdf(distributionClip, i);
       }
       assert(prN<1);
-      prN = max(10E-30, prN)
+      prN = max(10E-30, prN);
       prCl = max(10E-30,1-prN);
       Pn[c][b] = log(prN);
       Pcl[c][b] = log(prCl);
@@ -2738,6 +2718,10 @@ int hmcnc(Parameters& params) {
       vector<vector<double> > priorCovCov;
       priorCovCov.resize(covCovTransP.size());
       int nSites=covBins[0].size();
+
+      //
+      // Not used for now.
+      //
       vector<vector<double> > prior;
       ApplyPriorToTransP(covBins,
 			 covCovTransP.size(),
