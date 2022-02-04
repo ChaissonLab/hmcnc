@@ -672,12 +672,10 @@ double BaumWelchEOnChrom(const vector<double> &startP,
       clipCovCovTransP[i].resize(clipCovCovTransP[i].size());
 
       for (size_t j=0; j < covCovTransP[i].size(); j++) {
-        noClipSum = covCovTransP[i][j] + Pn[k];
+        noClipSum    = covCovTransP[i][j] + Pn[k];
         clipSum      = clipCovCovTransP[i][j] + Pcl[k] ;
         logClipSum   = PairSumOfLogP(logClipSum, f[i][k] + clipSum + emisP[j][obs[k+1]] + b[j][k+1]);
-	logNoClipSum = PairSumOfLogP(logNoClipSum, f[i][k] + noClipSum + emisP[j][obs[k+1]] + b[j][k+1]);
-
-	
+	      logNoClipSum = PairSumOfLogP(logNoClipSum, f[i][k] + noClipSum + emisP[j][obs[k+1]] + b[j][k+1]);
       }
     }
     for (size_t i=0; i < covCovTransP.size(); i++) {
@@ -685,7 +683,7 @@ double BaumWelchEOnChrom(const vector<double> &startP,
         double pNoClipEdge = f[i][k] + covCovTransP[i][j] + Pn[k] + emisP[j][obs[k+1]] + b[j][k+1];
         double pClipEdge   = f[i][k] +  clipCovCovTransP[i][j] + Pcl[k] + emisP[j][obs[k+1]] + b[j][k+1];
         expCovCovNoClipTransP[i][j] = PairSumOfLogP(expCovCovNoClipTransP[i][j], pNoClipEdge - logNoClipSum);
-	expCovCovClipTransP[i][j]   = PairSumOfLogP(expCovCovClipTransP[i][j], pClipEdge - logClipSum);
+	      expCovCovClipTransP[i][j]   = PairSumOfLogP(expCovCovClipTransP[i][j], pClipEdge - logClipSum);
 	
       }
     }
@@ -1026,15 +1024,7 @@ void BaumWelchM(const vector<double> &startP,
   const int nStates=static_cast<int>(startP.size());
   updateNoClipTransP.resize(nStates);
   updateClipTransP.resize(nStates);
-    //vector<double> colSums;
 
-  /*  cerr << "Update trans: " << '\n';
-    cerr << "p\t";
-  for (int j=0; j < nStates; j++) {
-    cerr << std::setw(8) << j << '\t';
-  }
-  cerr << '\n';
-  */
 
   for (int j=0; j < nStates; j++) {
     double noClipColSum=0;
@@ -1044,14 +1034,13 @@ void BaumWelchM(const vector<double> &startP,
     assert(nStates <= expNoClipTransP[j].size());
     assert(nStates <= expClipTransP[j].size());
     for (int k=0; k< nStates; k++) {
-      noClipColSum += expNoClipTransP[j][k];
-      clipColSum   += expClipTransP[j][k];
+      noClipColSum = PairSumOfLogP(noClipSum, expNoClipTransP[j][k]);
+      clipColSum   = PairSumOfLogP(clipColSum, expClipTransP[j][k]);
     }
-//    colSums.push_back(colSum);
     
-    cerr << j;
+    //cerr << j;
     for (int k=0; k < nStates; k++) {
-      updateClipTransP[j][k] = expClipTransP[j][k]- clipColSum; 
+      updateClipTransP[j][k] = expClipTransP[j][k] - clipColSum; 
       updateNoClipTransP[j][k] = expNoClipTransP[j][k] - noClipColSum;
     }
   }
