@@ -1034,7 +1034,7 @@ void BaumWelchM(const vector<double> &startP,
     assert(nStates <= expNoClipTransP[j].size());
     assert(nStates <= expClipTransP[j].size());
     for (int k=0; k< nStates; k++) {
-      noClipColSum = PairSumOfLogP(noClipSum, expNoClipTransP[j][k]);
+      noClipColSum = PairSumOfLogP(noClipColSum, expNoClipTransP[j][k]);
       clipColSum   = PairSumOfLogP(clipColSum, expClipTransP[j][k]);
     }
     
