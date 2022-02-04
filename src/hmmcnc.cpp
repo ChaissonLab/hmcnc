@@ -189,7 +189,6 @@ const double epsilon = 0.00000000001;
 
 double PairSumOfLogP(double a, double b) {
   double res = b;
-  assert(res<0);
   if (a != 0) {
     const double m = max(a, b);
 
