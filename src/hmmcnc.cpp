@@ -637,14 +637,12 @@ void ApplyPriorToTransP(vector<vector<int> > &f,
 }
 
 double BaumWelchEOnChrom(const vector<double> &startP,
-			 vector<vector<double>> &covCovTransP,
-			 vector<vector<double>> &clipCovCovTransP,
+			 vector<vector<double>> &covCovTransP, vector<vector<double>> &clipCovCovTransP,
 			 vector<vector<double>> &emisP,
 			 vector<int> &obs,
 			 vector<vector<double>> &f,
 			 vector<vector<double>> &b,
-			 vector<vector<double>> &expCovCovNoClipTransP,
-			 vector<vector<double>> &expCovCovClipTransP,
+			 vector<vector<double>> &expCovCovNoClipTransP, vector<vector<double>> &expCovCovClipTransP,
 			 vector<vector<double>> &expEmisP,
        vector<double> &Pn, vector<double> &Pcl) {
 
@@ -653,40 +651,44 @@ double BaumWelchEOnChrom(const vector<double> &startP,
   const int nclObs = Pcl.size();
   const int nNObs = Pn.size();
 
-  const double px = ForwardBackwards(startP, covCovTransP, clipCovCovTransP, emisP, obs, f, b, Pn , Pcl);
-
   assert(nNObs==nclObs);
   assert(nObs==nclObs);
 
+  const double px = ForwardBackwards(startP, covCovTransP, clipCovCovTransP, emisP, obs, f, b, Pn , Pcl);
+
+  double pNoClipEdge = 0;
+  double pClipEdge = 0;
+
+
   for (int k=1; k< nObs-1; k++) {
-    double logClipSum = 0;
-    double clipSum = 0;
-    double noClipSum = 0;
-    double logNoClipSum = 0;
     //
     // Calculate total probability of all transitions at this step.
     //
+    //
+    double logClipSum = 0;
+    double logNoClipSum = 0;
+    
     for (size_t i=0; i < covCovTransP.size(); i++) {
       covCovTransP[i].resize(covCovTransP[i].size());
       clipCovCovTransP[i].resize(clipCovCovTransP[i].size());
-
       for (size_t j=0; j < covCovTransP[i].size(); j++) {
-        noClipSum    = covCovTransP[i][j] + Pn[k];
-        clipSum      = clipCovCovTransP[i][j] + Pcl[k] ;
-        logClipSum   = PairSumOfLogP(logClipSum, f[i][k] + clipSum + emisP[j][obs[k+1]] + b[j][k+1]);
-	      logNoClipSum = PairSumOfLogP(logNoClipSum, f[i][k] + noClipSum + emisP[j][obs[k+1]] + b[j][k+1]);
+        logClipSum   = PairSumOfLogP(logClipSum, f[i][k] + clipCovCovTransP[i][j] + Pcl[k] + emisP[j][obs[k+1]] + b[j][k+1]);
+        logNoClipSum = PairSumOfLogP(logNoClipSum, f[i][k] + covCovTransP[i][j] + Pn[k] + emisP[j][obs[k+1]] + b[j][k+1]);
       }
     }
     for (size_t i=0; i < covCovTransP.size(); i++) {
       for (size_t j=0; j < covCovTransP[i].size(); j++) {
-        double pNoClipEdge = f[i][k] + covCovTransP[i][j] + Pn[k] + emisP[j][obs[k+1]] + b[j][k+1];
-        double pClipEdge   = f[i][k] +  clipCovCovTransP[i][j] + Pcl[k] + emisP[j][obs[k+1]] + b[j][k+1];
+        pNoClipEdge = f[i][k] + covCovTransP[i][j] + Pn[k] + emisP[j][obs[k+1]] + b[j][k+1];
+        pClipEdge   = f[i][k] + clipCovCovTransP[i][j] + Pcl[k] + emisP[j][obs[k+1]] + b[j][k+1];
+        assert( (isnan(exp(pNoClipEdge - logNoClipSum)) == false) and (isnan(exp(pClipEdge - logClipSum)) == false) );
+        assert( (pNoClipEdge - logNoClipSum < 0) and (pClipEdge - logClipSum < 0) );
         expCovCovNoClipTransP[i][j] = PairSumOfLogP(expCovCovNoClipTransP[i][j], pNoClipEdge - logNoClipSum);
-	      expCovCovClipTransP[i][j]   = PairSumOfLogP(expCovCovClipTransP[i][j], pClipEdge - logClipSum);
-	
+        expCovCovClipTransP[i][j]   = PairSumOfLogP(expCovCovClipTransP[i][j], pClipEdge - logClipSum);
       }
     }
-  }
+   // printModel(expCovCovNoClipTransP, &cerr);
+   // printModel(expCovCovClipTransP, &cerr);
+}
   //
   // For now do not tune parameters for emission.
   //
@@ -1009,12 +1011,10 @@ void BaumWelchM(const vector<double> &startP,
 		int model,
 		const vector<long> &stateTotCov,
 		const vector<long> &stateNCov,
-		const vector<vector<double>> &expNoClipTransP,
-		const vector<vector<double>> &expClipTransP,
+		const vector<vector<double>> &expNoClipTransP, const vector<vector<double>> &expClipTransP,
 		vector<vector<double>> &expEmisP,
 		vector<vector<double>> &covCovPrior,
-		vector<vector<double>> &updateNoClipTransP,
-		vector<vector<double>> &updateClipTransP,
+		vector<vector<double>> &updateNoClipTransP, vector<vector<double>> &updateClipTransP,
 		vector<vector<double>> &updateEmisP) {
 
   //
@@ -1032,6 +1032,7 @@ void BaumWelchM(const vector<double> &startP,
     updateClipTransP[j].resize(nStates);
     assert(nStates <= expNoClipTransP[j].size());
     assert(nStates <= expClipTransP[j].size());
+
     for (int k=0; k< nStates; k++) {
       noClipColSum = PairSumOfLogP(noClipColSum, expNoClipTransP[j][k]);
       clipColSum   = PairSumOfLogP(clipColSum, expClipTransP[j][k]);
@@ -1039,6 +1040,7 @@ void BaumWelchM(const vector<double> &startP,
     
     //cerr << j;
     for (int k=0; k < nStates; k++) {
+     assert( (expClipTransP[j][k] - clipColSum < 0) and ( expNoClipTransP[j][k] - noClipColSum < 0) );
       updateClipTransP[j][k] = expClipTransP[j][k] - clipColSum; 
       updateNoClipTransP[j][k] = expNoClipTransP[j][k] - noClipColSum;
     }
@@ -1809,8 +1811,6 @@ void InitParams(vector<vector<double>> &covCovTransP,
   covCovTransP.resize(nCovStates);
   clipCovCovTransP.resize(nCovStates);
 
-  const double DiagE = log( 1 - (exp(epsi23) * (nCovStates -1) ) );
-
   const double Diag1 = log(  1 -  (  exp(beta)   * (nCovStates-3)) + exp(epsi23) + exp(epsi12)  );
 
   const double Diag2 = log(  (1 -  (  exp(beta)   * (nCovStates-2)) /2)) ;
@@ -1828,6 +1828,22 @@ void InitParams(vector<vector<double>> &covCovTransP,
   const double stayScaler = neutralScaler + log(5);
 
 
+  // const double DiagE = diag;//-0.0000001;
+
+  const double unif = log(1.0/nCovStates);
+
+  const double offDiagE = epsi23;//PairSumOfLogP( 0 , -1 * DiagE ) - log(nCovStates-1);
+  
+  const double DiagE = log( 0.99 );
+  
+  //const double DiagE =  unif; //log(0.99);//log( 1 - exp(beta + log(nCovStates -1) ) );//-1E-5;//PairSumOfLogP( 0 , -1 * (beta + log(nCovStates-1)) );
+  
+  cout<<"DiagE: "<<DiagE<<endl;
+
+
+
+  //diag = unif;
+  //offDiag = unif;
 
   for (int i=0;i<nCovStates;i++) {
     covCovTransP[i].resize(nCovStates);
