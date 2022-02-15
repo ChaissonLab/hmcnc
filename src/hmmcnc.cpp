@@ -1326,13 +1326,13 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
       break;
     }
 
-    vector<vector<double>> f, b, expCovCovTransP, expCovCovClipTransP, expEmisP;
-    expCovCovTransP.resize(threadInfo->transP->size());
-    expCovCovClipTransP.resize(threadInfo->transP->size());
+    vector<vector<double>> f, b, expCovNoClipTransP, expCovClipTransP, expEmisP;
+    expCovNoClipTransP.resize(threadInfo->transP->size());
+    expCovClipTransP.resize(threadInfo->transP->size());
     
-    for (int i=0; i < expCovCovTransP.size(); i++) {
-      expCovCovTransP[i].resize(expCovCovTransP.size(), 0);
-      expCovCovClipTransP[i].resize(expCovCovTransP.size(), 0);
+    for (int i=0; i < expCovNoClipTransP.size(); i++) {
+      expCovNoClipTransP[i].resize(expCovNoClipTransP.size(), 0);
+      expCovClipTransP[i].resize(expCovNoClipTransP.size(), 0);
 
     }
     expEmisP.resize(threadInfo->emisP->size());
@@ -1341,12 +1341,11 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
     }
 
     pChrom = BaumWelchEOnChrom(*threadInfo->startP,
-                                *threadInfo->transP,
-                                *threadInfo->clTransP,
+                                *threadInfo->transP, *threadInfo->clTransP,
                                 *threadInfo->emisP,
                                 (*threadInfo->covBins)[curSeq],
                                 f, b,
-                                expCovCovTransP, expCovCovClipTransP,
+                                expCovNoClipTransP, expCovClipTransP,
                                 expEmisP,
                                 (*threadInfo->n)[curSeq], (*threadInfo->cl)[curSeq]);
 
@@ -1354,13 +1353,13 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
     // Update expected transitions
     //
     pthread_mutex_lock(threadInfo->semaphore);
-    if ((*threadInfo->chromCopyNumber)[curSeq] >= 1.5 and
-	  (*threadInfo->chromCopyNumber)[curSeq] < 2.5)
+
+    if ((*threadInfo->chromCopyNumber)[curSeq] >= 1.5 and (*threadInfo->chromCopyNumber)[curSeq] < 2.5)
     {
       for (size_t i=0; i < threadInfo->transP->size(); i++) {
 	      for (size_t j=0; j < (*threadInfo->transP)[i].size(); j++) {
-	        (*threadInfo->expTransP)[i][j] += expCovCovTransP[i][j];
-          (*threadInfo->expClipTransP)[i][j] += expCovCovClipTransP[i][j];          
+	        (*threadInfo->expTransP)[i][j] += expCovNoClipTransP[i][j];
+          (*threadInfo->expClipTransP)[i][j] += expCovClipTransP[i][j];          
         }
       }
       for (size_t i=0; i < threadInfo->emisP->size(); i++) {
@@ -1853,18 +1852,18 @@ void InitParams(vector<vector<double>> &covCovTransP,
       {//leaving del state
         if (i==j){
           covCovTransP[i][j] = DiagE - log(2) ;// Diag0 - log(2);
-          clipCovCovTransP[i][j] = diag ; //clDiag0 - log(2);
+          clipCovCovTransP[i][j] = diag - log(2) ; //clDiag0 - log(2);
         }
         else if(j==1){
-          covCovTransP[i][j] = epsi23 ;// epsi12;
+          covCovTransP[i][j] = offDiagE ;// epsi12;
           clipCovCovTransP[i][j] = offDiag ; //epsi12;
         }
         else if(j==2){
           covCovTransP[i][j] = DiagE - log(2);////Diag0 - log(2);
-          clipCovCovTransP[i][j] =  diag ;//clDiag0 - log(2);
+          clipCovCovTransP[i][j] =  diag - log(2) ;//clDiag0 - log(2);
         }
         else{
-          covCovTransP[i][j] = epsi23 ;// //beta;
+          covCovTransP[i][j] = offDiagE ;// //beta;
           clipCovCovTransP[i][j] =  offDiag ;//clipBeta;
         }
       }
@@ -1872,19 +1871,19 @@ void InitParams(vector<vector<double>> &covCovTransP,
       else if(i==2)
       {//leaving neutral state
         if(i==j){
-          covCovTransP[i][j] = DiagE ;//Diag1;
+          covCovTransP[i][j] = DiagE;// -9.9999999999999994e-10;// DiagE ;//Diag1;
           clipCovCovTransP[i][j] =  diag ;//clDiag1;
         }
         else if(j==1){
-          covCovTransP[i][j] = epsi23;////epsi12;
+          covCovTransP[i][j] = offDiagE;////epsi12;
           clipCovCovTransP[i][j] = offDiag ;//epsi12;
         }
         else if (j==3){
-          covCovTransP[i][j] = epsi23;////epsi23;
+          covCovTransP[i][j] = offDiagE;////epsi23;
           clipCovCovTransP[i][j] = offDiag ;//epsi23;
         }
         else{
-          covCovTransP[i][j] = epsi23 ;////beta; 
+          covCovTransP[i][j] = offDiagE ;////beta; 
           clipCovCovTransP[i][j] =  offDiag;//clipBeta; 
         }
       }
@@ -1892,14 +1891,14 @@ void InitParams(vector<vector<double>> &covCovTransP,
       {
         if(i==j){ 
           covCovTransP[i][j] = DiagE - log(2); //Diag2;
-          clipCovCovTransP[i][j] =  diag ;//clDiag2; 
+          clipCovCovTransP[i][j] =  diag - log(2);//clDiag2; 
         }
         else if(j==2){
           covCovTransP[i][j] = DiagE - log(2);////Diag2;
-          clipCovCovTransP[i][j] =  diag ;//clDiag2;
+          clipCovCovTransP[i][j] =  diag - log(2) ;//clDiag2;
         }
         else{
-          covCovTransP[i][j] = epsi23 ;////beta;
+          covCovTransP[i][j] = offDiagE ;////beta;
           clipCovCovTransP[i][j] =  offDiag ;//clipBeta;
         }
       }
