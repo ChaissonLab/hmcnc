@@ -214,6 +214,15 @@ void WriteCovBed(const std::string &covFileName,
 		             const std::vector<std::string> &contigNames,
 		             const std::vector<std::vector<int>> &covBins);
 
+void WriteClipBed(std::ostream &covFile,
+                 const std::vector<std::string> &contigNames,
+                 const std::vector<std::vector<int>> &covBins,
+                const std::vector<std::vector<double>> &Pn, const std::vector<std::vector<double>> &Pcl);
+void WriteClipBed(const std::string &covFileName,
+                 const std::vector<std::string> &contigNames,
+                 const std::vector<std::vector<int>> &covBins,
+                const std::vector<std::vector<double>> &Pn, const std::vector<std::vector<double>> &Pcl);
+
 void WriteParameterFile(std::ostream &file, int nStates, double covMean,
                         double covVar, int maxState, int maxCov,
                         const std::vector<double> &startP,

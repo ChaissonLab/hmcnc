@@ -244,6 +244,36 @@ void WriteCovBed(const std::string &covFileName,
   WriteCovBed(covFile, contigNames, covBins);
 }
 
+void WriteClipBed(std::ostream &covFile,
+                const std::vector<std::string> &contigNames,
+                const std::vector<std::vector<int>> &covBins,
+                const std::vector<std::vector<double>> &Pn, const std::vector<std::vector<double>> &Pcl) {
+  for (size_t c=0; c < contigNames.size(); c++) {
+    assert(c < covBins.size());
+    const auto &contigName = contigNames[c];
+    const auto &contigBins = covBins[c];
+    const auto &contigPn = Pn[c];
+    const auto &contigPcl = Pcl[c];
+    for (size_t i=0; i < contigBins.size(); i++) {
+      covFile << contigName << '\t'
+              << i*100 << '\t'
+              << (i+1)*100 << '\t'
+              << contigBins[i] << '\t'
+              << contigPn[i]<<'\t'
+              << contigPcl[i]<<'\n';
+    }
+  }
+}
+void WriteClipBed(const std::string &covFileName,
+                const std::vector<std::string> &contigNames,
+                const std::vector<std::vector<int>> &covBins,
+                const std::vector<std::vector<double>> &Pn, const std::vector<std::vector<double>> &Pcl) {
+  std::ofstream covFile{covFileName.c_str()};
+  WriteClipBed(covFile, contigNames, covBins, Pn, Pcl);
+}
+
+
+
 void WriteParameterFile(std::ostream &outFile, int nStates, double covMean,
                         double covVar, int maxState, int maxCov,
                         const std::vector<double> &startP,
