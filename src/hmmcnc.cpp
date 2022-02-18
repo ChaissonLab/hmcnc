@@ -628,12 +628,12 @@ void ApplyPriorToTransP(vector<vector<int> > &f,
     int nBins=f[contig].size();
     for (int i=0; i < nStates; i++) {
       for (int j=0; j < nStates; j++ ) {
-	if (i == j) {
-	  expCovCovTransP[i][j] += nBins*10;
-	}
-	else {
-	  expCovCovTransP[i][j] += 10;
-	}
+		if (i == j) {
+		  expCovCovTransP[i][j] += nBins*10;
+		}
+		else {
+		  expCovCovTransP[i][j] += 10;
+		}
       }
     }
 
@@ -1358,7 +1358,7 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
       for (size_t i=0; i < threadInfo->transP->size(); i++) {
 	      for (size_t j=0; j < (*threadInfo->transP)[i].size(); j++) {
 	        (*threadInfo->expTransP)[i][j] += expCovNoClipTransP[i][j];
-          (*threadInfo->expClipTransP)[i][j] += expCovClipTransP[i][j];          
+          	(*threadInfo->expClipTransP)[i][j] += expCovClipTransP[i][j];          
         }
       }
       for (size_t i=0; i < threadInfo->emisP->size(); i++) {
@@ -1831,7 +1831,7 @@ void InitParams(vector<vector<double>> &covCovTransP,
   
   const double offDiagE = log(exp(large)/(nCovStates-1));
 
-  const double DiagE = log(1- exp(offDiag));
+  const double DiagE = log(1- exp(large));
   
 
   for (int i=0;i<nCovStates;i++) {
