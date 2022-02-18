@@ -628,12 +628,12 @@ void ApplyPriorToTransP(vector<vector<int> > &f,
     int nBins=f[contig].size();
     for (int i=0; i < nStates; i++) {
       for (int j=0; j < nStates; j++ ) {
-		if (i == j) {
-		  expCovCovTransP[i][j] += nBins*10;
-		}
-		else {
-		  expCovCovTransP[i][j] += 10;
-		}
+    		if (i == j) {
+    		  expCovCovTransP[i][j] += nBins*10;
+    		}
+    		else {
+    		  expCovCovTransP[i][j] += 10;
+    		}
       }
     }
 
@@ -1827,12 +1827,15 @@ void InitParams(vector<vector<double>> &covCovTransP,
 
   const double unif = log(1.0/nCovStates);
 
-  const double large = -100;
+  const double large = -30;
   
   const double offDiagE = log(exp(large)/(nCovStates-1));
 
-  const double DiagE = log(1- exp(large));
+  const double DiagE = log(1- exp(large));// + log (nCovStates-1)) );
   
+  //offDiag = unif;
+
+  //diag = unif;
 
   for (int i=0;i<nCovStates;i++) {
     covCovTransP[i].resize(nCovStates);
@@ -1841,16 +1844,16 @@ void InitParams(vector<vector<double>> &covCovTransP,
       if (i==0)
       {//leaving del state
         if (i==j){
-          covCovTransP[i][j] = DiagE - log(2) ;// Diag0 - log(2);
-          clipCovCovTransP[i][j] = diag - log(2) ; //clDiag0 - log(2);
+          covCovTransP[i][j] = DiagE;// - log(2) ;// Diag0 - log(2);
+          clipCovCovTransP[i][j] = diag ;//- log(2) ; //clDiag0 - log(2);
         }
         else if(j==1){
           covCovTransP[i][j] = offDiagE ;// epsi12;
           clipCovCovTransP[i][j] = offDiag ; //epsi12;
         }
         else if(j==2){
-          covCovTransP[i][j] = DiagE - log(2);////Diag0 - log(2);
-          clipCovCovTransP[i][j] =  diag - log(2) ;//clDiag0 - log(2);
+          covCovTransP[i][j] = offDiagE;// - log(2);////Diag0 - log(2);
+          clipCovCovTransP[i][j] =  offDiag ;//- log(2) ;//clDiag0 - log(2);
         }
         else{
           covCovTransP[i][j] = offDiagE ;// //beta;
@@ -1880,12 +1883,12 @@ void InitParams(vector<vector<double>> &covCovTransP,
       else
       {
         if(i==j){ 
-          covCovTransP[i][j] = DiagE - log(2); //Diag2;
-          clipCovCovTransP[i][j] =  diag - log(2);//clDiag2; 
+          covCovTransP[i][j] = DiagE;// - log(2); //Diag2;
+          clipCovCovTransP[i][j] =  diag ;//- log(2);//clDiag2; 
         }
         else if(j==2){
-          covCovTransP[i][j] = DiagE - log(2);////Diag2;
-          clipCovCovTransP[i][j] =  diag - log(2) ;//clDiag2;
+          covCovTransP[i][j] = offDiagE ;//- log(2);////Diag2;
+          clipCovCovTransP[i][j] =  offDiag;// - log(2) ;//clDiag2;
         }
         else{
           covCovTransP[i][j] = offDiagE ;////beta;
@@ -2412,6 +2415,10 @@ int hmcnc(Parameters& params) {
 
   EstimateCoverage(params.bamFileName, covBins, allContigNames, allContigLengths, params.useChrom, mean, var);
 
+  //debug
+  mean = 36;
+  var = 100;
+
   if ((mean/var)>=0.90 and (mean/var)<=1.10){
     params.model= POIS;
     MODEL_TYPE model=POIS;
@@ -2560,8 +2567,8 @@ int hmcnc(Parameters& params) {
   const double epsi12 = log(result12)-log(result11);
 
 
-  const double lepsi23_nb = LgNegBinom(3, (int) mean , (float) (mean/2), (float)(var/2)  ) - LgNegBinom(2, (int) mean , (float) (mean/2), (float)(var/2)  );
-  const double lepsi21_nb = LgNegBinom(1, (int) mean , (float) (mean/2), (float)(var/2)  ) - LgNegBinom(2, (int) mean , (float) (mean/2), (float)(var/2)  );
+  const double lepsi23_nb = LgNegBinom(2, (int) (3*mean/2) , (float) (mean/2), (float)(var/2)  ) - LgNegBinom(3, (int) (3*mean/2) , (float) (mean/2), (float)(var/2)  );
+  const double lepsi21_nb = LgNegBinom(2, (int) (mean/2) , (float) (mean/2), (float)(var/2)  ) - LgNegBinom(1, (int) (mean/2) , (float) (mean/2), (float)(var/2)  );
 
 
 
@@ -2667,7 +2674,7 @@ int hmcnc(Parameters& params) {
   const double unif=log(1.0/nStates);
 
 
-  const double small=-30;
+  const double small=-10;
 
   if (params.paramInFile == "") {
     InitParams(covCovTransP, clipCovCovTransP, covSnvTransP, snvSnvTransP,
@@ -2887,12 +2894,12 @@ int hmcnc(Parameters& params) {
       int intvStart = copyIntervals[c][i].start/100;
       int intvEnd   = copyIntervals[c][i].end/100;
       if (copyIntervals[c][i].copyNumber >= MAX_CN-2) {
-	double intvCoverage = std::accumulate(&origCovBins[c][intvStart], &origCovBins[c][intvEnd], 0);
-	double cnReal = 2*intvCoverage / ((intvEnd-intvStart)*mean);
-	int cn=round(cnReal);
-	//cerr << "Prev CN " << copyIntervals[c][i].copyNumber << " CUR: " << cn << endl;
-	copyIntervals[c][i].copyNumber = cn;
-      }
+		double intvCoverage = std::accumulate(&origCovBins[c][intvStart], &origCovBins[c][intvEnd], 0);
+		double cnReal = 2*intvCoverage / ((intvEnd-intvStart)*mean);
+		int cn=round(cnReal);
+		//cerr << "Prev CN " << copyIntervals[c][i].copyNumber << " CUR: " << cn << endl;
+		copyIntervals[c][i].copyNumber = cn;
+	  }
     }
   }
 
