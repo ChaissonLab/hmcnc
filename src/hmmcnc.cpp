@@ -598,7 +598,7 @@ double ForwardBackwards(const vector<double> &startP,
 
   double finalCol=0;
   for (int j=0; j < nCovStates; j++) {
-    finalCol = PairSumOfLogP(finalCol, f[j][totObs]);
+    finalCol = PairSumOfLogP(finalCol, f[j][totObs]+ log(1./nCovStates));
   }
 
   return finalCol;
@@ -680,24 +680,13 @@ double BaumWelchEOnChrom(const vector<double> &startP,
     double logNoClipSum = 0;
     double transPsum = 0;
     
-    for (size_t i=0; i < covCovTransP.size(); i++) {
-      covCovTransP[i].resize(covCovTransP[i].size());
-      clipCovCovTransP[i].resize(clipCovCovTransP[i].size());
-      for (size_t j=0; j < covCovTransP[i].size(); j++) {
-        transPsum    = PairSumOfLogP(clipCovCovTransP[i][j] + Pcl[k], covCovTransP[i][j] + Pn[k] );
-        logClipSum   = PairSumOfLogP(logClipSum, f[i][k] + clipCovCovTransP[i][j] + Pcl[k] + emisP[j][obs[k]] + b[j][k+1]);
-        logNoClipSum = PairSumOfLogP(logNoClipSum, f[i][k] + covCovTransP[i][j] + Pn[k] + emisP[j][obs[k]] + b[j][k+1]);
-      }
-    }
     
     for (size_t i=0; i < covCovTransP.size(); i++) {
       for (size_t j=0; j < covCovTransP[i].size(); j++) {
-        transPsum    = PairSumOfLogP(clipCovCovTransP[i][j] + Pcl[k], covCovTransP[i][j] + Pn[k] );
         pNoClipEdge = f[i][k] + covCovTransP[i][j] + Pn[k] + emisP[j][obs[k]] + b[j][k+1];
         pClipEdge   = f[i][k] + clipCovCovTransP[i][j] + Pcl[k] + emisP[j][obs[k]] + b[j][k+1];
-        assert( (isnan(exp(pNoClipEdge - logNoClipSum)) == false) and (isnan(exp(pClipEdge - logClipSum)) == false) );
-	expCovCovNoClipTransP[i][j] += exp(pNoClipEdge - logNoClipSum);
-	expCovCovClipTransP[i][j]   += exp(pClipEdge - logClipSum);
+		expCovCovNoClipTransP[i][j] += exp(pNoClipEdge - px);
+		expCovCovClipTransP[i][j]   += exp(pClipEdge - px);
       }
     }
 
@@ -1836,22 +1825,14 @@ void InitParams(vector<vector<double>> &covCovTransP,
 
   const double stayScaler = neutralScaler + log(5);
 
-
-  // const double DiagE = diag;//-0.0000001;
-
   const double unif = log(1.0/nCovStates);
 
-  const double large = -100;//PairSumOfLogP( 0 , -1 * DiagE ) - log(nCovStates-1);
+  const double large = -100;
   
   const double offDiagE = log(exp(large)/(nCovStates-1));
 
-  const double DiagE = log(1- exp(offDiag));// + log(nCovStates-1) ));//log(  1 -  (  exp( offDiagE  + log(nCovStates-1)) ) );//log( 0.99 );
+  const double DiagE = log(1- exp(offDiag));
   
-  //const double DiagE =  unif; //log(0.99);//log( 1 - exp(beta + log(nCovStates -1) ) );//-1E-5;//PairSumOfLogP( 0 , -1 * (beta + log(nCovStates-1)) );
-  
-
-  //diag = unif;
-  //offDiag = unif;
 
   for (int i=0;i<nCovStates;i++) {
     covCovTransP[i].resize(nCovStates);
