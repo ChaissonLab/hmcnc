@@ -561,7 +561,7 @@ double ForwardBackwards(const vector<double> &startP,
         colSum = PairSumOfLogP(colSum, f[j][k] + clipSum);
       }
       assert(obs[k] < emisP[i].size());
-      f[i][k+1] = colSum + emisP[i][obs[k+1]];
+      f[i][k+1] = colSum + emisP[i][obs[k]];
     }
   }
 
@@ -667,7 +667,7 @@ double ForwardBackwards(const vector<double> &startP,
         colSum = PairSumOfLogP(colSum, f[j][k] + clipSum);
       }
       assert(obs[k] < emisP[i].size());
-      f[i][k+1] = colSum + emisP[i][obs[k+1]];
+      f[i][k+1] = colSum + emisP[i][obs[k]];
     }
   }
 
