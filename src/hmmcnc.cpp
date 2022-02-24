@@ -558,8 +558,6 @@ double ForwardBackwards(const vector<double> &startP,
         assert(k < f[j].size());
         assert(j < covCovTransP.size());
         assert(i < covCovTransP[j].size());
-        assert(j < clipCovCovTransP.size());
-        assert(i < clipCovCovTransP[j].size());
         clipSum = covCovTransP[i][j];
         colSum = PairSumOfLogP(colSum, f[j][k] + clipSum);
       }
@@ -762,7 +760,12 @@ double BaumWelchEOnChrom(const vector<double> &startP,
   assert(nNObs==nclObs);
   assert(nObs==nclObs);
 
-  const double px = ForwardBackwards(startP, covCovTransP, clipCovCovTransP, emisP, obs, f, b, Pn , Pcl);
+  const double pxClip = ForwardBackwards(startP, covCovTransP, clipCovCovTransP, emisP, obs, f, b, Pn , Pcl);
+
+  const double pxNoclip = ForwardBackwards(startP, covCovTransP, emisP, obs, f, b);
+
+
+  std::cerr<<"\npxNoclip: "<<pxNoclip<<"\npxClip: "<<pxClip<<endl;
 
   double pNoClipEdge = 0;
   double pClipEdge = 0;
@@ -782,8 +785,8 @@ double BaumWelchEOnChrom(const vector<double> &startP,
       for (size_t j=0; j < covCovTransP[i].size(); j++) {
         pNoClipEdge = f[i][k] + covCovTransP[i][j] + Pn[k] + emisP[j][obs[k]] + b[j][k+1];
         pClipEdge   = f[i][k] + clipCovCovTransP[i][j] + Pcl[k] + emisP[j][obs[k]] + b[j][k+1];
-		expCovCovNoClipTransP[i][j] += exp(pNoClipEdge - px);
-		expCovCovClipTransP[i][j]   += exp(pClipEdge - px);
+    		expCovCovNoClipTransP[i][j] += exp(pNoClipEdge - pxClip);
+    		expCovCovClipTransP[i][j]   += exp(pClipEdge - pxClip);
       }
     }
 
@@ -791,7 +794,7 @@ double BaumWelchEOnChrom(const vector<double> &startP,
   //
   // For now do not tune parameters for emission.
   //
-  return px;
+  return pxClip;
 }
 
 void AssignNearestClip(vector<vector<int > > &clipBins,
@@ -822,7 +825,8 @@ void AssignNearestClip(vector<vector<int > > &clipBins,
       if (maxClipPos != -1) {
         intervals[contig][i].distanceToFrontClip=abs(maxClipPos - intvStart);
         intervals[contig][i].nFrontClip=maxClip;
-        cerr << "Found start clip for " << contigNames[contig] << "\t"
+
+/*        cerr << "Found start clip for " << contigNames[contig] << "\t"
              << i << "\t"
              << intervals[contig][i].distanceToFrontClip << "\t"
              << intervals[contig][i].nFrontClip << "\t"
@@ -830,6 +834,7 @@ void AssignNearestClip(vector<vector<int > > &clipBins,
              << intervals[contig][i].start << "-"
              << intervals[contig][i].end  << "\t"
              << intervals[contig][i].copyNumber << endl;
+ */ 
       }
 
       // Look for clipping at the end of the interval
@@ -845,7 +850,8 @@ void AssignNearestClip(vector<vector<int > > &clipBins,
       if (maxClipPos != -1) {
         intervals[contig][i].distanceToEndClip=abs(maxClipPos - intvEnd);
         intervals[contig][i].nEndClip=maxClip;
-        cerr << "Found End clip for " << contigNames[contig] << "\t"
+
+/*        cerr << "Found End clip for " << contigNames[contig] << "\t"
              << i << "\t"
              << intervals[contig][i].distanceToEndClip << "\t"
              << intervals[contig][i].nEndClip << "\t"
@@ -853,6 +859,8 @@ void AssignNearestClip(vector<vector<int > > &clipBins,
              << intervals[contig][i].start << "-"
              << intervals[contig][i].end <<  "\t"
              << intervals[contig][i].copyNumber << endl;
+  
+*/
       }
     }
   }
@@ -2523,8 +2531,6 @@ int hmcnc(Parameters& params) {
   }
 
 
-
-
   ChromCopyNumber(covBins, mean,chromCopyNumber);
 
 
@@ -2559,6 +2565,9 @@ int hmcnc(Parameters& params) {
   }
     
   cerr<<"Clip Mean: "<<clipMean<<endl;
+  cerr<<"Cov Mean: "<<mean<<"\nCov Var: "<<var<<endl;
+
+
 
   poisson distributionClip(clipMean);
 
@@ -2570,22 +2579,22 @@ int hmcnc(Parameters& params) {
     Pcl[c].resize(clipBins[c].size());
     for (auto b=0 ;b < clipBins[c].size(); b++) {
       if (useClip) {
-	double prN=0, prCl=0;     
-	int ii = max(1, clipBins[c][b] - rClipStd ); //zeroes truncated
-	int ie = clipBins[c][b] + rClipStd;
-      
-	for ( int i =ii; i <= ie; i++ ){
-	  prN = prN + pdf(distributionClip, i);
-	}
-	assert(prN<1);
-	prN = max(10E-30, prN);
-	prCl = max(10E-30,1-prN);
-	Pn[c][b] = log(prN);
-	Pcl[c][b] = log(prCl);
+      	double prN=0, prCl=0;     
+      	int ii = max(1, clipBins[c][b] - rClipStd ); //zeroes truncated
+      	int ie = clipBins[c][b] + rClipStd;
+            
+      	for ( int i =ii; i <= ie; i++ ){
+      	  prN = prN + pdf(distributionClip, i);
+      	}
+      	assert(prN<1);
+      	prN = max(10E-30, prN);
+      	prCl = max(10E-30,1-prN);
+      	Pn[c][b] = log(prN);
+      	Pcl[c][b] = log(prCl);
       }
       else {
-	Pn[c][b] = 0;
-	Pcl[c][b] = -10000;
+      	Pn[c][b] = 0;
+      	Pcl[c][b] = -10000;
       }
     }
   }
