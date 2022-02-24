@@ -536,7 +536,6 @@ double ForwardBackwards(const vector<double> &startP,
 
   for (int j=0; j < nCovStates; j++) {
     f[j][0] = emisP[j][obs[0]] + log(1./nCovStates);
-    b[j][totObs] = log(1./nCovStates);
   }
 
   const double lgthird=log(1/3.);
@@ -634,7 +633,6 @@ double ForwardBackwards(const vector<double> &startP,
 
   for (int j=0; j < nCovStates; j++) {
     f[j][0] = emisP[j][obs[0]] + log(1./nCovStates);
-    b[j][totObs] = log(1./nCovStates);
   }
 
   const double lgthird=log(1/3.);
@@ -2442,7 +2440,7 @@ int hmcnc(Parameters& params) {
   if (params.paramInFile == "") {
     //max cov value observed or upper cov bound -> max nState---------------
     nStates= std::min( maxState , MAX_CN  ) + 1; //+1 zeroth state
-    MAX_CN=nStates+1;
+    //MAX_CN=nStates+1;
     startP.resize(nStates);
     for(int i=0;i<(nStates);i++) {
       startP[i]=log(1./(nStates));
@@ -2649,7 +2647,7 @@ int hmcnc(Parameters& params) {
     snvs[c].resize(p);
   }
 
-  cerr << "Computing copy-number up to " << MAX_CN << '\n';
+  cerr << "Computing copy-number up to " << MAX_CN-1 << '\n';
   //----------------------------------------------------------------------
 
   if (mean == 0) {
