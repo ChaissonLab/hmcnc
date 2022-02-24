@@ -117,6 +117,13 @@ double CSEmisP(int state, int pos,
 
 double ForwardBackwards(const std::vector<double> &startP,
                         const std::vector<std::vector<double>> &covCovTransP,
+                        const std::vector<std::vector<double>> &emisP,
+                        const std::vector<int> &obs,
+                        std::vector<std::vector<double>> &f,
+                        std::vector<std::vector<double>> &b);
+
+double ForwardBackwards(const std::vector<double> &startP,
+                        const std::vector<std::vector<double>> &covCovTransP,
                         const std::vector<std::vector<double>> &clipCovCovTransP,
                         const std::vector<std::vector<double>> &emisP,
                         const std::vector<int> &obs,

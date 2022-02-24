@@ -501,6 +501,104 @@ double CSEmisP(int state,
 
 double ForwardBackwards(const vector<double> &startP,
                         const vector<vector<double>> &covCovTransP,
+                        const std::vector<std::vector<double>> &emisP,
+                        const std::vector<int> &obs,
+                        std::vector<std::vector<double>> &f,
+                        std::vector<std::vector<double>> &b) {
+  const int totObs    = static_cast<int>(obs.size());
+  const int nCovObs   = static_cast<int>(obs.size());
+  const int nCovStates = static_cast<int>(startP.size());
+  assert(nCovStates > 0);
+
+  //
+  // Eventually this can be done with logic in the code, but for now just store a
+  // flag at each observation if it is an SNV or cov emission.
+  //
+
+  //
+  // Initialize first col from standing.
+  //
+
+  // f and b are of length nObs+1
+  // The first/last prob from an observation are at:
+  //  f[1], f[nObs], from obs[0...nObs-1]
+  //  and b[nObs], b[1] from obs[nObs-1 ... 0]
+  //
+  f.resize(nCovStates);
+  b.resize(nCovStates);
+
+  for (int i = 0; i < nCovStates; i++) {
+    f[i].resize(totObs+1);
+    fill(f[i].begin(), f[i].end(), 0);
+    b[i].resize(totObs+1);
+    fill(b[i].begin(), b[i].end(), 0);
+  }
+
+  for (int j=0; j < nCovStates; j++) {
+    f[j][0] = emisP[j][obs[0]] + log(1./nCovStates);
+    b[j][totObs] = log(1./nCovStates);
+  }
+
+  const double lgthird=log(1/3.);
+
+  if (nCovStates == 1) {
+    fill(f[0].begin(), f[0].end(), -1);
+    fill(b[0].begin(), b[0].end(), -1);
+    return 0;
+  }
+  int prevCovIdx=0, curCovIdx=0;
+  int prevSNVIdx=0, curSNVIdx=0;
+  double clipSum=0;
+  for (int k=0; k < totObs; k++) {
+    for (int i=0; i < nCovStates; i++) {
+      double colSum=0;
+      for (int j=0; j < nCovStates; j++) {
+        assert(j== 0 or colSum != 0);
+        assert(j < f.size());
+        assert(k < f[j].size());
+        assert(j < covCovTransP.size());
+        assert(i < covCovTransP[j].size());
+        assert(j < clipCovCovTransP.size());
+        assert(i < clipCovCovTransP[j].size());
+        clipSum = covCovTransP[i][j];
+        colSum = PairSumOfLogP(colSum, f[j][k] + clipSum);
+      }
+      assert(obs[k] < emisP[i].size());
+      f[i][k+1] = colSum + emisP[i][obs[k+1]];
+    }
+  }
+
+  // back
+  for (int j=0; j < nCovStates; j++) {
+    b[j][totObs] = startP[j];
+  }
+
+  for (int k = totObs-1; k > 0; k--) {
+    for (int i=0; i < nCovStates; i++) {
+      double colSum=0;
+      for (int j=0; j < nCovStates; j++) {
+        assert(j== 0 or colSum != 0);
+        assert(prevCovIdx < obs.size()+1);
+        clipSum = covCovTransP[i][j];
+        colSum = PairSumOfLogP(colSum, b[j][k+1] + clipSum + emisP[j][obs[k]]);
+      }
+      b[i][k] = colSum;
+    }
+  }
+
+  double finalCol=0;
+  for (int j=0; j < nCovStates; j++) {
+    finalCol = PairSumOfLogP(finalCol, f[j][totObs]+ log(1./nCovStates));
+  }
+
+  return finalCol;
+}
+
+
+
+
+double ForwardBackwards(const vector<double> &startP,
+                        const vector<vector<double>> &covCovTransP,
                         const std::vector<std::vector<double>> &clipCovCovTransP,
                         const std::vector<std::vector<double>> &emisP,
                         const std::vector<int> &obs,
@@ -537,7 +635,7 @@ double ForwardBackwards(const vector<double> &startP,
   }
 
   for (int j=0; j < nCovStates; j++) {
-    f[j][0] = log(1./nCovStates);
+    f[j][0] = emisP[j][obs[0]] + log(1./nCovStates);
     b[j][totObs] = log(1./nCovStates);
   }
 
@@ -573,8 +671,7 @@ double ForwardBackwards(const vector<double> &startP,
         colSum = PairSumOfLogP(colSum, f[j][k] + clipSum);
       }
       assert(obs[k] < emisP[i].size());
-      f[i][k+1] = colSum + emisP[i][obs[k]];
-
+      f[i][k+1] = colSum + emisP[i][obs[k+1]];
     }
   }
 
