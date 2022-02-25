@@ -156,8 +156,6 @@ void intersectDelCall( std::vector<Interval> &mergedIntervals, std::vector<Inter
 
 void mergeNaiveIntervals(std::vector<Interval> &intervals, std::vector<Interval> &mergedIntervals, std::string contig);
 
-void quant( std::vector<std::vector<Interval>> &mergedIntervals ,double q, std::vector<std::string> &contigNames ,std::vector<Interval> &stats);
-
 void NaiveCaller(std::vector<int> &covBins, std::vector<Interval> &NaiveIntervals, double mean );
 
 void StorePosteriorMaxIntervals(const std::vector<int> &cov,

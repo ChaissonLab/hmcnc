@@ -463,7 +463,7 @@ void CombineEmissions(const vector<int> &obs,
     c++;
   }
   if (c != obs.size() or s != snvs.size()) {
-    cerr << "ERROR computing obs incex." << '\n';
+    cerr << "ERROR computing obs index." << '\n';
     exit(1);
   }
 }
@@ -980,36 +980,7 @@ void mergeNaiveIntervals(vector<Interval> &intervals, vector<Interval> &mergedIn
   }
 }
 
-void quant( vector<vector<Interval>> & mergedIntervals ,double q, vector<string> &contigNames, vector<Interval> &stats ){
-  vector<Interval> lens1;
-  vector<Interval> lens3;
-  for (size_t c=0 ;c < contigNames.size(); c++) {
-    for (int i=0; i < mergedIntervals[c].size(); i++){
-      if (mergedIntervals[c][i].copyNumber==3){
-        lens3.push_back(Interval( mergedIntervals[c][i].start, mergedIntervals[c][i].end, 3, (float)c, 0.0 ));
-      }
-      else if(mergedIntervals[c][i].copyNumber==1){
-        lens1.push_back(Interval( mergedIntervals[c][i].start, mergedIntervals[c][i].end, 1, (float)c, 0.0 ));
-      }
-    }
-  }
-  std::sort(lens1.begin(),lens1.end(),compareIntervalLength);
-  std::sort(lens3.begin(),lens3.end(),compareIntervalLength);
-  const int idx1= (int)(q * lens1.size());
-  const int idx3= (int)(q * lens3.size());
-  const int idx1_5 = (int)(0.5 * lens1.size());
-  const int idx3_5 = (int)(0.5 * lens1.size());
 
-  stats.push_back(lens3[idx3]);
-  stats.push_back(lens1[idx1]);
-
-  cerr<<"99th percentile CN=3 length: "<<stats[0].end-stats[0].start<<"\n";
-  cerr<<"99th percentile CN=1 length: "<<stats[1].end-stats[1].start<<"\n";
-  cerr<<"Median CN=3 length: "<<lens3[idx3_5].end - lens3[idx3_5].start<<"\n";
-  cerr<<"Median CN=1 length: "<<lens1[idx1_5].end - lens1[idx1_5].start<<"\n";
-
-
-}
 
 void NaiveCaller(vector<int> &covBins, vector<Interval> & UnmergedNaiveIntervals, double mean ){
 
@@ -1782,7 +1753,7 @@ int EstimateCoverage(const string &bamFileName,
     if (nSamples > 0) {
       mean=totCov/nSamples;
       var=totCovSq/nSamples-mean*mean;
-      cerr << "Estimating coverage on precomputed bins " << nSamples << " ending at " << mean << '\t' << var << '\n';
+      cerr << "Estimating coverage on precomputed bins " << nSamples << "\nmean\tvar\n " << mean << '\t' << var << '\n';
     }
     else {
       cerr << "Could not estimate coverage using precomputed coverage on chrom " << useChrom << '\n';
@@ -2647,7 +2618,7 @@ int hmcnc(Parameters& params) {
     snvs[c].resize(p);
   }
 
-  cerr << "Computing copy-number up to " << MAX_CN-1 << '\n';
+  cerr << "Computing copy-number up to " << MAX_CN << '\n';
   //----------------------------------------------------------------------
 
   if (mean == 0) {
@@ -2680,79 +2651,120 @@ int hmcnc(Parameters& params) {
 
   if( contigNames.size() > 1 or contigLengths[0] > MIN_CONTIG_SIZE ){
     vector<Interval> stats;
-    quant(mergedNaiveIntervals, 0.99, contigNames, stats);
+    double q = 0.99;
+    int cn3quant,cn1quant;
     double epsi21_emp=0;
     double epsi23_emp=0;
     double epsi3_emp=0;
     double epsi1_emp=0;
+    //quant(mergedNaiveIntervals, 0.99, contigNames, stats);
 
-    const int cn3quant = (int) (stats[0].end-stats[0].start)/BIN_LENGTH;
-    const size_t contigg3 = (size_t) stats[0].averageCoverage;
-    const int end3 = (int) stats[0].end/BIN_LENGTH;
+    vector<Interval> lens1;
+    vector<Interval> lens3;
 
-    const int cn1quant = (int) (stats[1].end-stats[1].start)/BIN_LENGTH;
-    const size_t contigg1 = (size_t) stats[1].averageCoverage;
-    const int end1 = (int) stats[1].end/BIN_LENGTH;
-
-    assert(UnmergedNaiveIntervals[contigg3].size()==covBins[contigg3].size() and UnmergedNaiveIntervals[contigg1].size()==covBins[contigg1].size());
-    std::cerr<<contigNames[contigg3]<<"\t"<<end3-cn3quant<<"\t"<<end3<<std::endl;
-    std::cerr<<contigNames[contigg1]<<"\t"<<end1-cn1quant<<"\t"<<end1<<std::endl;
-
-
-    for (int i=end3-1; i>=end3-cn3quant;i-- ){
-      assert(UnmergedNaiveIntervals[contigg3][i].averageCoverage > (float)(mean) );
-      epsi23_emp += LgNegBinom( 2 , (int) covBins[contigg3][i], (float) (mean/2), (float)(var/2) );
-      epsi3_emp += LgNegBinom( 3 , (int) covBins[contigg3][i], (float) (mean/2), (float)(var/2) );
+    for (size_t c=0 ;c < contigNames.size(); c++) {
+      for (int i=0; i < mergedNaiveIntervals[c].size(); i++){
+        if (mergedNaiveIntervals[c][i].copyNumber==3){
+          lens3.push_back(Interval( mergedNaiveIntervals[c][i].start, mergedNaiveIntervals[c][i].end, 3, (float)c, 0.0 ));
+        }
+        else if(mergedNaiveIntervals[c][i].copyNumber==1){
+          lens1.push_back(Interval( mergedNaiveIntervals[c][i].start, mergedNaiveIntervals[c][i].end, 1, (float)c, 0.0 ));
+        }
+      }
+    }
+    if (!lens1.empty()){
+      std::sort(lens1.begin(),lens1.end(),compareIntervalLength);
+      const int idx1= (int)(q * lens1.size());
+      const int idx1_5 = (int)(0.5 * lens1.size()); 
+      stats.push_back(lens1[idx1]);
+      cerr<<"Median CN=1 length: "<<lens1[idx1_5].end - lens1[idx1_5].start<<"\n";
+      cerr<<"99th percentile CN=1 length: "<<stats[0].end-stats[0].start<<"\n";
+      cn1quant = (int) (stats[0].end-stats[0].start)/BIN_LENGTH;
+      const size_t contigg1 = (size_t) stats[0].averageCoverage;
+      const int end1 = (int) stats[0].end/BIN_LENGTH;
+      std::cerr<<contigNames[contigg1]<<"\t"<<end1-cn1quant<<"\t"<<end1<<std::endl;
+      assert(UnmergedNaiveIntervals[contigg1].size()==covBins[contigg1].size());
+      for (int i=end1-1; i>=end1-cn1quant;i-- ){
+        assert(UnmergedNaiveIntervals[contigg1][i].averageCoverage > 0);
+        epsi21_emp +=  LgNegBinom( 2 , (int) covBins[contigg1][i], (float) (mean/2), (float)(var/2) ) ;
+        epsi1_emp +=  LgNegBinom( 1 , (int) covBins[contigg1][i], (float) (mean/2), (float)(var/2) ) ;
+      }
+      const double lepsi21_emp = epsi21_emp - epsi1_emp;
+      std::cerr<<"empirical lepsi21: "<<lepsi21_emp<<std::endl;
+    }
+    else{
+      cn1quant = 1;
+      cerr<<"No CN=1 found in Naive intervals."<<endl;
     }
 
-    for (int i=end1-1; i>=end1-cn1quant;i-- ){
-          assert(UnmergedNaiveIntervals[contigg1][i].averageCoverage > 0);
-          epsi21_emp +=  LgNegBinom( 2 , (int) covBins[contigg1][i], (float) (mean/2), (float)(var/2) ) ;
-          epsi1_emp +=  LgNegBinom( 1 , (int) covBins[contigg1][i], (float) (mean/2), (float)(var/2) ) ;
+    if (!lens3.empty()){
+      std::sort(lens3.begin(),lens3.end(),compareIntervalLength);
+      const int idx3= (int)(q * lens3.size());
+      const int idx3_5 = (int)(0.5 * lens1.size());
+      stats.push_back(lens3[idx3]);
+      cerr<<"Median CN=3 length: "<<lens3[idx3_5].end - lens3[idx3_5].start<<"\n";
+      cerr<<"99th percentile CN=1 length: "<<stats[1].end-stats[1].start<<"\n";
+      const int cn3quant = (int) (stats[1].end-stats[1].start)/BIN_LENGTH;
+      const size_t contigg3 = (size_t) stats[1].averageCoverage;
+      const int end3 = (int) stats[1].end/BIN_LENGTH;  
+      std::cerr<<contigNames[contigg3]<<"\t"<<end3-cn3quant<<"\t"<<end3<<std::endl;
+      assert(UnmergedNaiveIntervals[contigg3].size()==covBins[contigg3].size());
+
+      for (int i=end3-1; i>=end3-cn3quant;i-- ){
+        assert(UnmergedNaiveIntervals[contigg3][i].averageCoverage > (float)(mean) );
+        epsi23_emp += LgNegBinom( 2 , (int) covBins[contigg3][i], (float) (mean/2), (float)(var/2) );
+        epsi3_emp += LgNegBinom( 3 , (int) covBins[contigg3][i], (float) (mean/2), (float)(var/2) );
+      }
+      const double lepsi23_emp = epsi23_emp - epsi3_emp;
+      std::cerr<<"empirical lepsi23: "<<lepsi23_emp<<endl;
     }
+    else{
+      cn3quant = 1;
+      cerr<<"No CN=3 found in Naive intervals."<<endl;
+    }
+
+
+
+
 
 
     const double scaler3 = (double) cn3quant;
     const double scaler1 = (double) cn1quant;
-    //99th percentile no. of bins for cn=3 call
-    const double lepsi23_emp = epsi23_emp - epsi3_emp;
-
-    const double lepsi21_emp = epsi21_emp - epsi1_emp;
-
-  /*
-  //genome wide ratio
-
-    for (size_t c=0 ;c < contigNames.size(); c++) {
-      std::cerr<<contigNames[c]<<" first "<<LgNegBinom( 2 , (int) UnmergedNaiveIntervals[c][0].averageCoverage, (float) (mean/2), (float)(var/2) )<<"\t"<< UnmergedNaiveIntervals[c][0].averageCoverage<<std::endl;
-      for (size_t i =0; i < UnmergedNaiveIntervals.size(); i++){
-        if(UnmergedNaiveIntervals[c][i].copyNumber==3){
-          assert(UnmergedNaiveIntervals[c][i].averageCoverage > (float)(mean) );
-          epsi23_emp +=  LgNegBinom( 2 , (int) UnmergedNaiveIntervals[c][i].averageCoverage, (float) (mean/2), (float)(var/2)  );
-          epsi3_emp +=  LgNegBinom( 3 , (int) UnmergedNaiveIntervals[c][i].averageCoverage, (float) (mean/2), (float)(var/2)  );
-
-        }
-        else if(UnmergedNaiveIntervals[c][i].copyNumber==1){
-          assert(UnmergedNaiveIntervals[c][i].averageCoverage > 0);
-          epsi21_emp +=  LgNegBinom( 2 , (int) UnmergedNaiveIntervals[c][i].averageCoverage, (float) (mean/2), (float)(var/2)  );
-          epsi1_emp +=  LgNegBinom( 1 , (int) UnmergedNaiveIntervals[c][i].averageCoverage, (float) (mean/2), (float)(var/2)  );
-
-        }
-      }
-
-    }
-    */
+    std::cerr<<"scaler3: "<<scaler3<<"\tscaler1: "<<scaler1<<std::endl;
     const double beta = eps + (scaler3 * epsi23);  //log(nStates-1)
     const double beta_nb = eps + (scaler3 * lepsi23_nb);  //log(nStates-1)
 
     const double beta1 = eps + (scaler1 * epsi12);  //log(nStates-1)
     const double beta_nb1 = eps + (scaler1 * lepsi21_nb);  //log(nStates-1)
 
-    std::cerr<<"empirical lepsi23: "<<lepsi23_emp<<" empirical lepsi21: "<<lepsi21_emp<<std::endl;
-    std::cerr<<"scaler3: "<<scaler3<<"\tscaler1: "<<scaler1<<std::endl;
 
     std::cerr<<"beta_p3: "<<beta<<" beta_nb3: "<<beta_nb<<std::endl;
     std::cerr<<"beta_p1: "<<beta1<<" beta_nb1: "<<beta_nb1<<std::endl;
-    
+
+    /*
+    //genome wide ratio
+
+      for (size_t c=0 ;c < contigNames.size(); c++) {
+        std::cerr<<contigNames[c]<<" first "<<LgNegBinom( 2 , (int) UnmergedNaiveIntervals[c][0].averageCoverage, (float) (mean/2), (float)(var/2) )<<"\t"<< UnmergedNaiveIntervals[c][0].averageCoverage<<std::endl;
+        for (size_t i =0; i < UnmergedNaiveIntervals.size(); i++){
+          if(UnmergedNaiveIntervals[c][i].copyNumber==3){
+            assert(UnmergedNaiveIntervals[c][i].averageCoverage > (float)(mean) );
+            epsi23_emp +=  LgNegBinom( 2 , (int) UnmergedNaiveIntervals[c][i].averageCoverage, (float) (mean/2), (float)(var/2)  );
+            epsi3_emp +=  LgNegBinom( 3 , (int) UnmergedNaiveIntervals[c][i].averageCoverage, (float) (mean/2), (float)(var/2)  );
+
+          }
+          else if(UnmergedNaiveIntervals[c][i].copyNumber==1){
+            assert(UnmergedNaiveIntervals[c][i].averageCoverage > 0);
+            epsi21_emp +=  LgNegBinom( 2 , (int) UnmergedNaiveIntervals[c][i].averageCoverage, (float) (mean/2), (float)(var/2)  );
+            epsi1_emp +=  LgNegBinom( 1 , (int) UnmergedNaiveIntervals[c][i].averageCoverage, (float) (mean/2), (float)(var/2)  );
+
+          }
+        }
+
+      }
+      */
+
+      
 
 
 
@@ -3019,6 +3031,8 @@ int hmcnc(Parameters& params) {
   }
 
   WriteVCF(*outPtr, params.referenceName, params.sampleName, contigNames, contigLengths, copyIntervals, writeFail);
+
+  std::cerr<<"hmcnc done."<<endl;
 
   if (params.outBedName != "") {
       const string naive_out = "naive." + params.outBedName;
