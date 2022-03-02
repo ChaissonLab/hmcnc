@@ -761,6 +761,7 @@ double BaumWelchEOnChrom(const vector<double> &startP,
   const double pxClip = ForwardBackwards(startP, covCovTransP, clipCovCovTransP, emisP, obs, f, b, Pn , Pcl);
 
   const double pxNoclip = ForwardBackwards(startP, covCovTransP, emisP, obs, f, b);
+  //const double pxNoclip = ForwardBackwards(startP, covCovTransP, emisP, obs, f, b);
 
 
   std::cerr<<"\npxNoclip: "<<pxNoclip<<"\npxClip: "<<pxClip<<endl;
@@ -2652,7 +2653,8 @@ int hmcnc(Parameters& params) {
   if( contigNames.size() > 1 or contigLengths[0] > MIN_CONTIG_SIZE ){
     vector<Interval> stats;
     double q = 0.99;
-    int cn3quant,cn1quant;
+    int cn3quant=1;
+    int cn1quant=1;
     double epsi21_emp=0;
     double epsi23_emp=0;
     double epsi3_emp=0;
