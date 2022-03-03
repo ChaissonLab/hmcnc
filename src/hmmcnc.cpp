@@ -535,7 +535,7 @@ double ForwardBackwards(const vector<double> &startP,
   }
 
   for (int j=0; j < nCovStates; j++) {
-    f[j][0] = emisP[j][obs[0]] + log(1./nCovStates);
+    f[j][0] = log(1./nCovStates);
   }
 
   const double lgthird=log(1/3.);
@@ -565,6 +565,11 @@ double ForwardBackwards(const vector<double> &startP,
     }
   }
 
+  double finalCol=0;
+  for (int j=0; j < nCovStates; j++) {
+    finalCol = PairSumOfLogP(finalCol, f[j][totObs]+ log(1./nCovStates));
+  }
+
   // back
   for (int j=0; j < nCovStates; j++) {
     b[j][totObs] = startP[j];
@@ -583,10 +588,12 @@ double ForwardBackwards(const vector<double> &startP,
     }
   }
 
-  double finalCol=0;
+  double bfinalCol=0;
   for (int j=0; j < nCovStates; j++) {
-    finalCol = PairSumOfLogP(finalCol, f[j][totObs]+ log(1./nCovStates));
+    bfinalCol = PairSumOfLogP(bfinalCol, b[j][1] + emisP[j][obs[0]] + log(1./nCovStates));
   }
+  assert(finalCol==bfinalCol);
+
 
   return finalCol;
 }
@@ -620,7 +627,9 @@ double ForwardBackwards(const vector<double> &startP,
   // The first/last prob from an observation are at:
   //  f[1], f[nObs], from obs[0...nObs-1]
   //  and b[nObs], b[1] from obs[nObs-1 ... 0]
-  //
+  //  and Pcl[0...nObs-1] , Pn[0...nObs-1]
+  //  nObs=totObs
+  
   f.resize(nCovStates);
   b.resize(nCovStates);
 
@@ -632,7 +641,7 @@ double ForwardBackwards(const vector<double> &startP,
   }
 
   for (int j=0; j < nCovStates; j++) {
-    f[j][0] = emisP[j][obs[0]] + log(1./nCovStates);
+    f[j][0] = log(1./nCovStates);
   }
 
   const double lgthird=log(1/3.);
@@ -666,9 +675,14 @@ double ForwardBackwards(const vector<double> &startP,
         clipSum = PairSumOfLogP(covCovTransP[i][j] + Pn[k] , clipCovCovTransP[i][j] + Pcl[k] );
         colSum = PairSumOfLogP(colSum, f[j][k] + clipSum);
       }
-      assert(obs[k] < emisP[i].size());
+      assert(obs[k] < emisP[i].size()); //capped coverage
       f[i][k+1] = colSum + emisP[i][obs[k]];
     }
+  }
+
+  double finalCol=0;
+  for (int j=0; j < nCovStates; j++) {
+    finalCol = PairSumOfLogP(finalCol, f[j][totObs]+ log(1./nCovStates));
   }
 
   // back
@@ -689,10 +703,11 @@ double ForwardBackwards(const vector<double> &startP,
     }
   }
 
-  double finalCol=0;
+  double bfinalCol=0;
   for (int j=0; j < nCovStates; j++) {
-    finalCol = PairSumOfLogP(finalCol, f[j][totObs]+ log(1./nCovStates));
+    bfinalCol = PairSumOfLogP(bfinalCol, b[j][1] + emisP[j][obs[0]] + log(1./nCovStates));
   }
+  assert(finalCol==bfinalCol);
 
   return finalCol;
 }
