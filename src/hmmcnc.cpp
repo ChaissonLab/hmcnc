@@ -758,11 +758,9 @@ double BaumWelchEOnChrom(const vector<double> &startP,
   assert(nNObs==nclObs);
   assert(nObs==nclObs);
 
-  const double pxClip = ForwardBackwards(startP, covCovTransP, clipCovCovTransP, emisP, obs, f, b, Pn , Pcl);
-
   const double pxNoclip = ForwardBackwards(startP, covCovTransP, emisP, obs, f, b);
-  //const double pxNoclip = ForwardBackwards(startP, covCovTransP, emisP, obs, f, b);
 
+  const double pxClip = ForwardBackwards(startP, covCovTransP, clipCovCovTransP, emisP, obs, f, b, Pn , Pcl);
 
   std::cerr<<"\npxNoclip: "<<pxNoclip<<"\npxClip: "<<pxClip<<endl;
 
@@ -1447,6 +1445,20 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
     StorePosteriorMaxIntervals((*threadInfo->covBins)[curSeq],
 			       f, b,
 			       (*threadInfo->copyIntervals)[curSeq]);
+    
+    /*
+    debug
+    for (size_t j=0; j<f[0].size(); j++){
+      cout<<(*threadInfo->contigNames)[curSeq]<<"\t"<<j<<"\t";
+      for (size_t i=0; i<f.size(); i++){
+        cout<<f[i][j]<<"\t";
+      }
+      cout<<endl;
+    }
+    cout<<endl;
+    cerr << "Stored " << (*threadInfo->copyIntervals)[curSeq].size()
+         << " copy intervals for " << (*threadInfo->contigNames)[curSeq] << endl;
+  //debug
   }
 }
 
