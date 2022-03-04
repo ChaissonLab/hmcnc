@@ -737,14 +737,57 @@ void ApplyPriorToTransP(vector<vector<int> > &f,
     for (int i=0; i < nStates; i++) {
       for (int j=0; j < nStates; j++ ) {
     		if (i == j) {
-    		  expCovCovTransP[i][j] += nBins*500;
+    		  expCovCovTransP[i][j] += nBins*5;
     		}
+        else if(j==2){
+          expCovCovTransP[i][j] += nBins*1;          
+        }
+    		else if(j==1 or j==3){
+    		  expCovCovTransP[i][j] += 1;
+    		}
+        else
+          expCovCovTransP[i][j] += 10;          
+      }
+    }
+  }
+  // Expext roughly this many transitions in a mammalian genome.
+  //  expCovCovTransP[2][1] += 1000;
+  //  expCovCovTransP[2][3] += 100;
+}
+
+void ApplyPriorToTransP(vector<vector<int> > &f,
+      int nStates,
+      vector<vector<double> > &prior,
+      vector<vector<double>>  &expCovCovTransP) {
+  //
+  // For now the prior is hard-wired for human genomes.
+  //
+  prior.resize(nStates);
+  for (int i=0; i < nStates; i++) {
+    prior[i].resize(nStates, 0);
+  }
+  // Assume the following:
+  //
+  if (nStates < 4) {
+    cerr << "ERROR number of states should be at least 4" << endl;
+    exit(1);
+  }
+  //
+  // Prior is to keep in the same state.
+  //
+  for (int contig=0; contig< f.size(); contig++) {
+    int nBins=f[contig].size();
+    for (int i=0; i < nStates; i++) {
+      for (int j=0; j < nStates; j++ ) {
+        if (i == j) {
+          expCovCovTransP[i][j] += nBins*500;
+        }
         else if(j==2){
           expCovCovTransP[i][j] += nBins*100;          
         }
-    		else if(j==1 or j==3){
-    		  expCovCovTransP[i][j] += 100;
-    		}
+        else if(j==1 or j==3){
+          expCovCovTransP[i][j] += 100;
+        }
         else
           expCovCovTransP[i][j] += 1000;          
       }
@@ -2913,7 +2956,7 @@ int hmcnc(Parameters& params) {
 			 covCovTransP.size(),
 			 prior,
 			 expCovCovTransP);
-      ApplyPriorToTransP(covBins,
+      ApplyPriorToClipTransP(covBins,
 			 covCovTransP.size(),
 			 prior,
 			 expCovCovClipTransP);
