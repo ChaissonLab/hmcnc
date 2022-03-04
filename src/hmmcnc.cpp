@@ -737,18 +737,18 @@ void ApplyPriorToTransP(vector<vector<int> > &f,
     for (int i=0; i < nStates; i++) {
       for (int j=0; j < nStates; j++ ) {
     		if (i == j) {
-    		  expCovCovTransP[i][j] += nBins*10;
+    		  expCovCovTransP[i][j] += nBins*500;
     		}
-    		else {
-    		  expCovCovTransP[i][j] += 10;
+        else if(j==2){
+          expCovCovTransP[i][j] += nBins*100;          
+        }
+    		else if(j==1 or j==3){
+    		  expCovCovTransP[i][j] += 100;
     		}
+        else
+          expCovCovTransP[i][j] += 1000;          
       }
     }
-
-    //      for (int j=0; j < nStates; j++) {
-    //	expCovCovTransP[i][j] += nBins* prior[i][j] * 10;
-    //      }
-    //    }
   }
   // Expext roughly this many transitions in a mammalian genome.
   //  expCovCovTransP[2][1] += 1000;
@@ -2551,6 +2551,7 @@ int hmcnc(Parameters& params) {
     }
   }
   double clipMean;
+  double clipHmean = mean/2;
   bool   useClip;
   if (clipCount > 0) {    
     clipMean = (clippingSum/clipCount);
@@ -2564,34 +2565,43 @@ int hmcnc(Parameters& params) {
   cerr<<"Clip Mean: "<<clipMean<<endl;
   cerr<<"Cov Mean: "<<mean<<"\nCov Var: "<<var<<endl;
 
+  double PNeutral = log((10E7 - 100)/10E7);
+  double PClipped = log(100/10E7);//100 cliiping events WG
 
+  cerr<<"WG Pn: "<<PNeutral<<"\nWG Pcl: "<<PClipped<<"\nEst. ~100 clips in 10E7 bins"<<endl;
 
   poisson distributionClip(clipMean);
+  poisson distributionHClip(clipHmean);
 
-  double clipStd = std::sqrt(clipMean);
-  int rClipStd = ( std::ceil(clipStd) ) * 2;
+//  double clipStd = std::sqrt(clipMean);
+//  int rClipStd = ( std::ceil(clipStd) ) * 2;
 
   for (auto c=0 ;c < contigNames.size(); c++) {
     Pn[c].resize(clipBins[c].size());
     Pcl[c].resize(clipBins[c].size());
     for (auto b=0 ;b < clipBins[c].size(); b++) {
       if (useClip) {
-      	double prN=0, prCl=0;     
-      	int ii = max(1, clipBins[c][b] - rClipStd ); //zeroes truncated
-      	int ie = clipBins[c][b] + rClipStd;
-            
-      	for ( int i =ii; i <= ie; i++ ){
-      	  prN = prN + pdf(distributionClip, i);
-      	}
+        int clip_count = clipBins[c][b];
+        double Pneutral = log(pdf(distributionClip, clip_count));
+        double Pclipped = log(pdf(distributionHClip, clip_count));
+        double denom = PairSumOfLogP( PNeutral + Pneutral , PClipped + Pclipped );
+/*
       	assert(prN<1);
       	prN = max(10E-30, prN);
       	prCl = max(10E-30,1-prN);
-      	Pn[c][b] = log(prN);
-      	Pcl[c][b] = log(prCl);
+*/
+      	Pn[c][b]  = PNeutral + Pneutral - denom;
+      	Pcl[c][b] = PClipped + Pclipped - denom;
       }
       else {
-      	Pn[c][b] = 0;
-      	Pcl[c][b] = -10000;
+        double Pneutral = log(pdf(distributionClip, 0));
+        double Pclipped = log(pdf(distributionHClip, 0));
+        double denom = PairSumOfLogP( PNeutral + Pneutral , PClipped + Pclipped );
+        Pn[c][b]  = PNeutral + Pneutral - denom;
+        Pcl[c][b] = PClipped + Pclipped - denom;
+
+      	//Pn[c][b] = 0;
+      	//Pcl[c][b] = -10000;
       }
     }
   }
