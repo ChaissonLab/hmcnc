@@ -535,7 +535,7 @@ double ForwardBackwards(const vector<double> &startP,
   }
 
   for (int j=0; j < nCovStates; j++) {
-    f[j][0] = log(1./nCovStates);
+    f[j][0] = startP[j];
   }
 
   const double lgthird=log(1/3.);
@@ -641,7 +641,7 @@ double ForwardBackwards(const vector<double> &startP,
   }
 
   for (int j=0; j < nCovStates; j++) {
-    f[j][0] = log(1./nCovStates);
+    f[j][0] = startP[j];
   }
 
   const double lgthird=log(1/3.);
@@ -712,7 +712,7 @@ double ForwardBackwards(const vector<double> &startP,
   return finalCol;
 }
 
-void ApplyPriorToTransP(vector<vector<int> > &f,
+void ApplyPriorToClipTransP(vector<vector<int> > &f,
 			int nStates,
 			vector<vector<double> > &prior,
 			vector<vector<double>>  &expCovCovTransP) {
@@ -2485,7 +2485,10 @@ int hmcnc(Parameters& params) {
     //MAX_CN=nStates+1;
     startP.resize(nStates);
     for(int i=0;i<(nStates);i++) {
-      startP[i]=log(1./(nStates));
+      if (i==2)
+        startP[i]=log(0.5);
+      else
+        startP[i]=log(0.5) - log(nStates-1);
     }
   }
 
@@ -2575,77 +2578,87 @@ int hmcnc(Parameters& params) {
 
 
   double clippingSum = 0;
-  double clipCount = 0;
+  vector<int> clipCounts;
   for (auto c=0 ;c < contigNames.size(); c++) {
     if (chromCopyNumber[c] > 1.5 and chromCopyNumber[c] < 2.5) {
       NaiveCaller(covBins[c], UnmergedNaiveIntervals[c], mean );
       mergeNaiveIntervals(UnmergedNaiveIntervals[c], mergedNaiveIntervals[c], contigNames[c] );
 
-      for (int i=0; i < clipBins[c].size(); i++){
-        if (clipBins[c][i]>0){
-          clippingSum+=clipBins[c][i];
-          clipCount+=1;
-        }
-      }
+
 
     }
-    else {
+    else { 
       cerr << "Not using naive depth on " << contigNames[c] << " copy number " << chromCopyNumber[c] << endl;
     }
+    for (int i=0; i < clipBins[c].size(); i++){
+      if (clipBins[c][i]>0){
+        clippingSum+=clipBins[c][i];
+        clipCounts.push_back(clipBins[c][i]);
+      }
+    }
   }
-  double clipMean;
+
+
+
+  double clipMean, clipVar;
   double clipHmean = mean/2;
   bool   useClip;
-  if (clipCount > 0) {    
-    clipMean = (clippingSum/clipCount);
+  if (clipCounts.size() > 1) {    
+    clipMean = (clippingSum/clipCounts.size());
+    for (size_t i=0 ; i< clipCounts.size(); i++){
+      clipVar += (clipCounts[i] - clipMean) * (clipCounts[i] - clipMean);
+    }
+    clipVar=(clipVar/(clipCounts.size()-1));
     useClip  = true;
   }
   else {
     clipMean=1;
+    clipVar=3;
     useClip=false;
   }
     
-  cerr<<"Clip Mean: "<<clipMean<<endl;
+
+
+  cerr<<"Clip Mean: "<<clipMean<<"\nClip Var: "<<clipVar<<"\nuseClip: "<<useClip<<endl;
   cerr<<"Cov Mean: "<<mean<<"\nCov Var: "<<var<<endl;
 
+
+  //assert(clipMean*4<clipHmean);
+  //
+  // priors for clipping
+  //
+  // 100 clipping events WG
+  // 10E7 bins 
+  //
+
   double PNeutral = log((10E7 - 100)/10E7);
-  double PClipped = log(100/10E7);//100 cliiping events WG
+  double PClipped = log(100/10E7);
 
   cerr<<"WG Pn: "<<PNeutral<<"\nWG Pcl: "<<PClipped<<"\nEst. ~100 clips in 10E7 bins"<<endl;
+
+
+  // 
+  // update to NegB
+  //
 
   poisson distributionClip(clipMean);
   poisson distributionHClip(clipHmean);
 
-//  double clipStd = std::sqrt(clipMean);
-//  int rClipStd = ( std::ceil(clipStd) ) * 2;
-
+  int clip_count;
+  double Pneutral, Pclipped, denom;
+  int clipMax = MAX_CN * mean; // cap excessive clipping
   for (auto c=0 ;c < contigNames.size(); c++) {
     Pn[c].resize(clipBins[c].size());
     Pcl[c].resize(clipBins[c].size());
     for (auto b=0 ;b < clipBins[c].size(); b++) {
-      if (useClip) {
-        int clip_count = clipBins[c][b];
-        double Pneutral = log(pdf(distributionClip, clip_count));
-        double Pclipped = log(pdf(distributionHClip, clip_count));
-        double denom = PairSumOfLogP( PNeutral + Pneutral , PClipped + Pclipped );
-/*
-      	assert(prN<1);
-      	prN = max(10E-30, prN);
-      	prCl = max(10E-30,1-prN);
-*/
-      	Pn[c][b]  = PNeutral + Pneutral - denom;
-      	Pcl[c][b] = PClipped + Pclipped - denom;
-      }
-      else {
-        double Pneutral = log(pdf(distributionClip, 0));
-        double Pclipped = log(pdf(distributionHClip, 0));
-        double denom = PairSumOfLogP( PNeutral + Pneutral , PClipped + Pclipped );
-        Pn[c][b]  = PNeutral + Pneutral - denom;
-        Pcl[c][b] = PClipped + Pclipped - denom;
+        clip_count = min(clipMax , clipBins[c][b]); 
+        Pneutral = log(pdf(distributionClip, clip_count)) + PNeutral;
+        Pclipped = log(pdf(distributionHClip, clip_count)) + PClipped;
+        denom = PairSumOfLogP( Pneutral , Pclipped );
 
-      	//Pn[c][b] = 0;
-      	//Pcl[c][b] = -10000;
-      }
+      	Pn[c][b]  = Pneutral - denom;
+      	Pcl[c][b] = Pclipped - denom;
+
     }
   }
 
@@ -2872,7 +2885,7 @@ int hmcnc(Parameters& params) {
   const double unif=log(1.0/nStates);
 
 
-  const double small=-10;
+  const double small=-5;
 
   if (params.paramInFile == "") {
     InitParams(covCovTransP, clipCovCovTransP, covSnvTransP, snvSnvTransP,
