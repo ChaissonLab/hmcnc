@@ -737,16 +737,16 @@ void ApplyPriorToClipTransP(vector<vector<int> > &f,
     for (int i=0; i < nStates; i++) {
       for (int j=0; j < nStates; j++ ) {
     		if (i == j) {
-    		  expCovCovTransP[i][j] += nBins*5;
+    		  expCovCovTransP[i][j] += 4000;
     		}
         else if(j==2){
-          expCovCovTransP[i][j] += nBins*1;          
+          expCovCovTransP[i][j] += 1000;          
         }
     		else if(j==1 or j==3){
-    		  expCovCovTransP[i][j] += 1;
+    		  expCovCovTransP[i][j] += 10;
     		}
         else
-          expCovCovTransP[i][j] += 10;          
+          expCovCovTransP[i][j] += 100;          
       }
     }
   }
@@ -780,10 +780,10 @@ void ApplyPriorToTransP(vector<vector<int> > &f,
     for (int i=0; i < nStates; i++) {
       for (int j=0; j < nStates; j++ ) {
         if (i == j) {
-          expCovCovTransP[i][j] += nBins*500;
+          expCovCovTransP[i][j] += max(500000,nBins*500);
         }
         else if(j==2){
-          expCovCovTransP[i][j] += nBins*100;          
+          expCovCovTransP[i][j] += max(100000,nBins*100);          
         }
         else if(j==1 or j==3){
           expCovCovTransP[i][j] += 100;
