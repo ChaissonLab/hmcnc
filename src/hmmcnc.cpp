@@ -1081,7 +1081,7 @@ void intersectDelCall( vector<Interval> &mergedIntervals, vector<Interval> & cop
         copyIntervals[j].altInfo += ":DF";
         copyIntervals[j].altSample += ":1" ;        
         double diff = ((double) copyIntervals[j].averageCoverage) - ((double) mergedIntervals[i].averageCoverage) ;
-        if ( diff  > (mean*0.25)   )
+        if ( diff  > 2 ) //support for CN=1 can be much lower than (mean*0.25)   )
         {
           copyIntervals[j].copyNumber = 1;
           copyIntervals[j].averageCoverage = diff;
@@ -3020,6 +3020,11 @@ int hmcnc(Parameters& params) {
   //
   // Now filter cn=1 and cn=3 intervals, or short calls
   //
+  // skip filtering of composite calls
+  //
+  //
+
+
   assert(copyIntervals.size() <= contigNames.size());
   assert(snvs.size() <= contigNames.size());
   AssignNearestClip(clipBins,
@@ -3031,7 +3036,20 @@ int hmcnc(Parameters& params) {
   for (size_t c=0; c < contigNames.size(); c++) {
     int snvStart=0;
     for (size_t i=0; i < copyIntervals[c].size(); i++) {
-      const int curCN =copyIntervals[c][i].copyNumber;
+      const int curCN = copyIntervals[c][i].copyNumber;
+      
+      if (i==0){
+        if ( (copyIntervals[c][i+1].start - copyIntervals[c][i].end) < 2  ) //first call ith overlap with i+1 call
+          continue;
+      }
+      if (i == copyIntervals[c].size()-1){
+        if ( (copyIntervals[c][i].start - copyIntervals[c][i-1].end) < 2  ) //last call ith overlap with i-1 call
+          continue;
+      }
+      if ( (copyIntervals[c][i].start - copyIntervals[c][i-1].end) < 2  and  (copyIntervals[c][i+1].start - copyIntervals[c][i].end) < 2 ) {
+        continue;
+      }
+
       if ( curCN == 1 or curCN == 3) {
         while (snvStart < snvs[c].size() and snvs[c][snvStart].pos < copyIntervals[c][i].start) {
           snvStart++;
@@ -3080,9 +3098,11 @@ int hmcnc(Parameters& params) {
       	if (copyIntervals[c][i].nFrontClip > MIN_FCLIP or copyIntervals[c][i].nEndClip > MIN_ECLIP) {
       	  copyIntervals[c][i].filter = "PASS";
       	}
+        /*
       	if (copyIntervals[c][i].end - copyIntervals[c][i].start < MIN_SV_LENGTH) {
       	  copyIntervals[c][i].filter = "FAIL";
       	}
+        */
 	      snvStart=snvEnd;
       }
     }
@@ -3130,9 +3150,11 @@ int hmcnc(Parameters& params) {
   std::cerr<<"hmcnc done."<<endl;
 
   if (params.outBedName != "") {
+      const string del_out = "del_cigar." + params.outBedName;    
       const string naive_out = "naive." + params.outBedName;
       WriteBed( copyIntervals, params.outBedName, contigNames);
       WriteBed( mergedNaiveIntervals, naive_out, contigNames);
+      WriteBed( delT , del_out, contigNames);
 
     }
 
