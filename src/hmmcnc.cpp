@@ -592,7 +592,9 @@ double ForwardBackwards(const vector<double> &startP,
   for (int j=0; j < nCovStates; j++) {
     bfinalCol = PairSumOfLogP(bfinalCol, b[j][1] + emisP[j][obs[0]] + log(1./nCovStates));
   }
-  assert(finalCol==bfinalCol);
+  //debug
+  cerr<<"Pf: "<<finalCol<<"\tPb: "<<bfinalCol<<endl;
+  //assert(finalCol==bfinalCol);
 
 
   return finalCol;
@@ -707,7 +709,9 @@ double ForwardBackwards(const vector<double> &startP,
   for (int j=0; j < nCovStates; j++) {
     bfinalCol = PairSumOfLogP(bfinalCol, b[j][1] + emisP[j][obs[0]] + log(1./nCovStates));
   }
-  assert(finalCol==bfinalCol);
+  //debug
+  cerr<<"Pf: "<<finalCol<<"\tPb: "<<bfinalCol<<endl;
+  //assert(finalCol==bfinalCol);
 
   return finalCol;
 }
@@ -1504,19 +1508,21 @@ void ThreadedBWE(ThreadInfo *threadInfo) {
 			       f, b,
 			       (*threadInfo->copyIntervals)[curSeq]);
     
+    //debug
+    assert((f[0].size()-1)==(*threadInfo->cl)[curSeq].size());
     /*
-    debug
-    for (size_t j=0; j<f[0].size(); j++){
+    for (size_t j=8; j<14; j++){
       cout<<(*threadInfo->contigNames)[curSeq]<<"\t"<<j<<"\t";
-      for (size_t i=0; i<f.size(); i++){
-        cout<<f[i][j]<<"\t";
+      for (size_t i=1; i<4; i++){
+        cout<<f[i][j]+b[i][j]<<"\t";
       }
-      cout<<endl;
+      cout<<(*threadInfo->n)[curSeq][j-1]<<"\t"<<(*threadInfo->cl)[curSeq][j-1]<<endl;
     }
+    */
     cout<<endl;
     cerr << "Stored " << (*threadInfo->copyIntervals)[curSeq].size()
          << " copy intervals for " << (*threadInfo->contigNames)[curSeq] << endl;
-  //debug
+   
   }
 }
 
@@ -3038,15 +3044,13 @@ int hmcnc(Parameters& params) {
     for (size_t i=0; i < copyIntervals[c].size(); i++) {
       const int curCN = copyIntervals[c][i].copyNumber;
       
-      if (i==0){
-        if ( (copyIntervals[c][i+1].start - copyIntervals[c][i].end) < 2  ) //first call ith overlap with i+1 call
+      if (i==0 and (copyIntervals[c][i+1].start - copyIntervals[c][i].end) < 2  ){ //first call ith overlap with i+1 call
           continue;
       }
-      if (i == copyIntervals[c].size()-1){
-        if ( (copyIntervals[c][i].start - copyIntervals[c][i-1].end) < 2  ) //last call ith overlap with i-1 call
+      if (i == copyIntervals[c].size()-1 and (copyIntervals[c][i].start - copyIntervals[c][i-1].end) < 2  ){ //last call ith overlap with i-1 call
           continue;
       }
-      if ( (copyIntervals[c][i].start - copyIntervals[c][i-1].end) < 2  and  (copyIntervals[c][i+1].start - copyIntervals[c][i].end) < 2 ) {
+      if ( (copyIntervals[c][i].start - copyIntervals[c][i-1].end) < 2  or  (copyIntervals[c][i+1].start - copyIntervals[c][i].end) < 2 ) {
         continue;
       }
 
