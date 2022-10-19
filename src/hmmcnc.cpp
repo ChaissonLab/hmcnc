@@ -1513,9 +1513,6 @@ void ParseChrom(ThreadInfo *threadInfo) {
     std::unique_ptr<hts_itr_t, HtslibIteratorDeleter> regionIter(
       sam_itr_querys(threadInfo->bamidx.get(), threadInfo->samHeader.get(), region.c_str()));
 
-    int tid = sam_hdr_name2tid(threadInfo->samHeader.get(), contigName.c_str());
-    uint64_t idxTotalBases, idxTotalReads;
-    hts_idx_get_stat(threadInfo->bamidx.get(), tid, &idxTotalBases, &idxTotalReads);
 
     int chromLen;
     char *chromSeq = fai_fetch(threadInfo->fai.get(), region.c_str(), &chromLen);
@@ -1549,7 +1546,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
           reads.push_back(std::move(b));
         }
       }
-      cerr << "Reading " << (*threadInfo->contigNames)[curSeq] << ", chunk " << chunkNumber << ".\t" << reads.size() << "/" << totalBases << "/" << idxTotalBases << " reads/net/total" << '\n';
+      cerr << "Reading " << (*threadInfo->contigNames)[curSeq] << ", chunk " << chunkNumber << ".\t" << reads.size() << "/" << totalBases << " reads/net" << '\n';
       ++chunkNumber;
       pthread_mutex_unlock(threadInfo->semaphore);
 
