@@ -2353,7 +2353,7 @@ int hmcnc(Parameters& params) {
     }
     threadInfo[procIndex].bamidx = bamidx;
     threadInfo[procIndex].samHeader=samHeader;
-    threadInfo[procIndex].fai.reset(fai_load_format(params.referenceName.c_str(), FAI_FASTA));
+    threadInfo[procIndex].fai.reset(fai_load(params.referenceName.c_str()));
     if (params.nproc > 1) {
       threadInfo[procIndex].exit = true;
     }
