@@ -2033,17 +2033,22 @@ void InitParams(vector<vector<double>> &covCovTransP,
 
   //
   // Initialize copy number 1
+  // p: alt allele freq
+  // p = 0.1
+  
   int i=0;
+
   const double bino_one=0.9;
-  binoP[i][0][0] = bino_one;
+  binoP[i][0][0] = log(bino_one);
   for (int j2=1; j2 < maxCov; j2++) {
-    binoP[i][0][0] = log(1/((1-bino_one)/j2));
-    for (int k=0; k <= j2; k++) {
+    binoP[i][j2][0] = log(1/((1-bino_one)/j2));
+    for (int k=1; k <= j2; k++) {
       binoP[i][j2][k] = LgBinom(0.1, k, j2);
     }
   }
 
   // CN=2, diploid
+  // p=0.5
   i=1;
   //
   binoP[i][0][0] = log(bino_one);
@@ -2053,6 +2058,7 @@ void InitParams(vector<vector<double>> &covCovTransP,
     }
   }
   // CN=3, one extra copy
+  // p = 0.66
   i=2;
   binoP[i][0][0] = log(bino_one);
   for (int j2=1; j2 < maxCov; j2++) {
