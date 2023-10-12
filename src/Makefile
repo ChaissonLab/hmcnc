@@ -1,4 +1,4 @@
-all: samToBed viterbi hmmcnc
+all: samToBed viterbi hmcnc
 
 hmmcnc.o: hmmcnc.cpp
 	g++ -c -g2 -I $(CONDA_PREFIX)/include $^ -o $@
