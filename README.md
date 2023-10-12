@@ -8,7 +8,7 @@
 ---
 
 ### Requirements
-- gcc
+- gxx
 - meson
 - ninja
 - boost
