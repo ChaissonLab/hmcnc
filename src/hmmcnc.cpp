@@ -1566,7 +1566,6 @@ void ParseChrom(ThreadInfo *threadInfo) {
     std::unique_ptr<hts_itr_t, HtslibIteratorDeleter> regionIter(
       sam_itr_querys(threadInfo->bamidx.get(), threadInfo->samHeader.get(), region.c_str()));
 
-<<<<<<< HEAD
     int tid = sam_hdr_name2tid(threadInfo->samHeader.get(), contigName.c_str());
     if (tid < 0) {
       cerr << "ERROR. Contig " << contigName << " is not a reference sequence in the input bam." << std::endl;
@@ -1574,8 +1573,6 @@ void ParseChrom(ThreadInfo *threadInfo) {
     }
     uint64_t idxTotalBases, idxTotalReads;
     hts_idx_get_stat(threadInfo->bamidx.get(), tid, &idxTotalBases, &idxTotalReads);
-=======
->>>>>>> master
 
     int chromLen;
     char *chromSeq = fai_fetch(threadInfo->fai.get(), region.c_str(), &chromLen);
