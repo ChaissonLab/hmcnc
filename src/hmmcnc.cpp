@@ -1566,6 +1566,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
     std::unique_ptr<hts_itr_t, HtslibIteratorDeleter> regionIter(
       sam_itr_querys(threadInfo->bamidx.get(), threadInfo->samHeader.get(), region.c_str()));
 
+<<<<<<< HEAD
     int tid = sam_hdr_name2tid(threadInfo->samHeader.get(), contigName.c_str());
     if (tid < 0) {
       cerr << "ERROR. Contig " << contigName << " is not a reference sequence in the input bam." << std::endl;
@@ -1573,6 +1574,8 @@ void ParseChrom(ThreadInfo *threadInfo) {
     }
     uint64_t idxTotalBases, idxTotalReads;
     hts_idx_get_stat(threadInfo->bamidx.get(), tid, &idxTotalBases, &idxTotalReads);
+=======
+>>>>>>> master
 
     int chromLen;
     char *chromSeq = fai_fetch(threadInfo->fai.get(), region.c_str(), &chromLen);
@@ -1606,7 +1609,7 @@ void ParseChrom(ThreadInfo *threadInfo) {
           reads.push_back(std::move(b));
         }
       }
-      cerr << "Reading " << (*threadInfo->contigNames)[curSeq] << ", chunk " << chunkNumber << ".\t" << reads.size() << "/" << totalBases << "/" << idxTotalBases << " reads/net/total" << '\n';
+      cerr << "Reading " << (*threadInfo->contigNames)[curSeq] << ", chunk " << chunkNumber << ".\t" << reads.size() << "/" << totalBases << " reads/net" << '\n';
       ++chunkNumber;
       pthread_mutex_unlock(threadInfo->semaphore);
 
@@ -2110,17 +2113,22 @@ void InitParams(vector<vector<double>> &covCovTransP,
 
   //
   // Initialize copy number 1
+  // p: alt allele freq
+  // p = 0.1
+  
   int i=0;
+
   const double bino_one=0.9;
-  binoP[i][0][0] = bino_one;
+  binoP[i][0][0] = log(bino_one);
   for (int j2=1; j2 < maxCov; j2++) {
-    binoP[i][0][0] = log(1/((1-bino_one)/j2));
-    for (int k=0; k <= j2; k++) {
+    binoP[i][j2][0] = log(1/((1-bino_one)/j2));
+    for (int k=1; k <= j2; k++) {
       binoP[i][j2][k] = LgBinom(0.1, k, j2);
     }
   }
 
   // CN=2, diploid
+  // p=0.5
   i=1;
   //
   binoP[i][0][0] = log(bino_one);
@@ -2130,6 +2138,7 @@ void InitParams(vector<vector<double>> &covCovTransP,
     }
   }
   // CN=3, one extra copy
+  // p = 0.66
   i=2;
   binoP[i][0][0] = log(bino_one);
   for (int j2=1; j2 < maxCov; j2++) {
@@ -2438,7 +2447,7 @@ int hmcnc(Parameters& params) {
     }
     threadInfo[procIndex].bamidx = bamidx;
     threadInfo[procIndex].samHeader=samHeader;
-    threadInfo[procIndex].fai.reset(fai_load_format(params.referenceName.c_str(), FAI_FASTA));
+    threadInfo[procIndex].fai.reset(fai_load(params.referenceName.c_str()));
     if (params.nproc > 1) {
       threadInfo[procIndex].exit = true;
     }
