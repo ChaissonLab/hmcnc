@@ -2576,8 +2576,8 @@ int hmcnc(Parameters& params) {
   EstimateCoverage(params.bamFileName, covBins, allContigNames, allContigLengths, params.useChrom, mean, var);
 
   //debug
-  mean = 36;
-  var = 100;
+  //mean = 36;
+  //var = 100;
 
   if ((mean/var)>=0.90 and (mean/var)<=1.10){
     params.model= POIS;
