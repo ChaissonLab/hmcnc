@@ -10,11 +10,7 @@ hmmcnc.o: hmmcnc.cpp
 hmcnc_io.o: hmcnc_io.cpp
 	g++ -c -g2 -I $(CONDA_PREFIX)/include $^ -o $@
 
-<<<<<<< HEAD
 hmcnclip: main.cpp hmmcnc.o hmcnc_io.o
-=======
-hmcnc: main.cpp hmmcnc.o hmcnc_io.o
->>>>>>> master
 	g++ -g2 -I $(CONDA_PREFIX)/include $^ -o $@ -L $(CONDA_PREFIX)/lib -lhts -lpthread -ffast-math -Wl,-rpath-link=$(CONDA_PREFIX)/lib
 
 viterbi: viterbi.cpp
