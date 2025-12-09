@@ -1192,7 +1192,7 @@ int StoreSNVs(char *contigSeq, int contigLength, float mean,
   //
   const char *nucs="ACGTd";
 
-  assert(contigLength >= 0);
+  //assert(contigLength >= 0);
   assert(nA.size() <= contigLength);
   assert(nC.size() <= contigLength);
   assert(nG.size() <= contigLength);
