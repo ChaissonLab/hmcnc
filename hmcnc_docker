@@ -1,50 +1,27 @@
-FROM ubuntu:20.04
+FROM continuumio/miniconda3:latest
 
-# Set environment variables
-ENV CONDA_BASE=/opt/conda
+# Set up channels
+RUN conda config --add channels defaults && \
+    conda config --add channels bioconda && \
+    conda config --add channels conda-forge && \
+    conda config --set channel_priority strict
 
-# Install system dependencies
-RUN yum install -y wget
+# Create environment and install dependencies in one step
+RUN conda create -n hmcnc -y gxx boost bedtools samtools htslib tabix
 
-# Download and install Miniconda
-RUN DL_DIR=$(mktemp -d) && \
-    cd $DL_DIR && \
-    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
-    bash Miniconda3-latest-Linux-x86_64.sh -b -p $CONDA_BASE && \
-    cd - && \
-    rm -rf $DL_DIR && \
-    unset DL_DIR
+# Set shell to use the new conda environment
+SHELL ["conda", "run", "-n", "hmcnc", "/bin/bash", "-c"]
 
-# Set Miniconda environment
-ENV PATH $CONDA_BASE/bin:$PATH
+# Set working directory
+WORKDIR /app
 
-# Initialize and configure conda
-RUN conda init --system --yes && \
-    conda config --system --set auto_activate_base False && \
-    conda config --system --remove channels defaults && \
-    conda config --system --add channels bioconda && \
-    conda config --system --add channels conda-forge && \
-    conda config --system --set channel_priority strict && \
-    conda update -n base conda --yes
-
-# Create and activate a virtual environment
-RUN conda create -n henv --yes && \
-    echo "conda activate henv" >> ~/.bashrc
-SHELL ["conda", "run", "-n", "henv", "/bin/bash", "-c"]
-
-# Install dependencies
-RUN conda install -c conda-forge gxx boost --yes
-RUN conda install -c bioconda bedtools samtools htslib tabix --yes
-
-# Copy source code files
-COPY hmmcnc.cpp .
-COPY hmcnc_io.cpp .
-COPY main.cpp .
+# Copy the source code (assumes docker build is run from repo root)
+COPY src/ /app/src/
+COPY include/ /app/include/
 
 # Compile the C++ program
-RUN g++ -c -g2 -I $CONDA_PREFIX/include hmmcnc.cpp -o hmmcnc.o && \
-    g++ -c -g2 -I $CONDA_PREFIX/include hmcnc_io.cpp -o hmcnc_io.o && \
-    g++ -g2 -I $CONDA_PREFIX/include main.cpp hmmcnc.o hmcnc_io.o -o hmcnc -L $CONDA_PREFIX/lib -lhts -lpthread -ffast-math -Wl,-rpath=$CONDA_PREFIX/lib
+WORKDIR /app/src
+RUN make
 
 # Set the command to run the program
-CMD ["./hmcnc"]
+ENTRYPOINT ["conda", "run", "-n", "hmcnc", "./hmcnclip"]

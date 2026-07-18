@@ -25,6 +25,14 @@ conda activate hmcnc
 cd src && make
 ```
 
+#### Using Docker
+```bash
+git clone https://github.com/chaissonlab/hmcnc.git
+cd hmcnc
+docker build -t hmcnc -f hmcnc_docker .
+docker run --rm -v $(pwd):/data hmcnc -a /data/sample.bam /data/hg38.fa
+```
+
 #### Using Meson
 ```bash
 cd hmcnc ; mkdir build ; cd build ; meson .. ; ninja
@@ -126,4 +134,4 @@ Raw bin-level HMM outputs often fragment large CNVs due to localized mapping dro
 Pericentromeric arrays and telomeric repeats severely skew global read depth means and inflate variance. By supplying a BED file of exclusion regions, `hmcnc` bypasses these regions during initial parameter estimation *and* during VCF output, producing a highly stable, noise-resistant training baseline.
 
 ### Benchmarking
-A complete benchmarking pipeline is provided in the `benchmarks/` directory using Snakemake (`benchmark.smk`). The pipeline evaluates the model against truth sets and provides comprehensive accuracy and performance metrics. See `benchmarking_results_review.md` for a detailed review of the recent evaluation results.
+A complete benchmarking pipeline is provided in the `benchmarks/` directory using Snakemake (`benchmark.smk`). The pipeline evaluates the model against truth sets and provides comprehensive accuracy and performance metrics. See `benchmarking_results_review.md` for a detailed review of the recent evaluation results, including the recovered parameter configurations for all Phase 5.x sub-experiments.
