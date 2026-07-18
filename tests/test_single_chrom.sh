@@ -11,12 +11,12 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HMCNC="${SCRIPT_DIR}/../src/hmcnclip"
+HMCNC="${SCRIPT_DIR}/../src/hmcnc"
 TEST_DATA="${SCRIPT_DIR}/data"
 
-# Check that hmcnclip is built
+# Check that hmcnc is built
 if [ ! -x "$HMCNC" ]; then
-    echo "ERROR: hmcnclip not found at $HMCNC"
+    echo "ERROR: hmcnc not found at $HMCNC"
     echo "Please build first: cd src && make"
     exit 1
 fi
@@ -67,10 +67,10 @@ echo ""
 # Example 3: Workflow - full genome stats, then single chrom run
 echo "=== Example 3: Two-step workflow ==="
 echo "Step 1: Extract stats from full genome coverage bed"
-echo "  hmcnclip ref.fa -b full_genome.cov.bed --stats-only"
+echo "  hmcnc ref.fa -b full_genome.cov.bed --stats-only"
 echo ""
 echo "Step 2: Run HMM on single chromosome with those stats"
-echo "  hmcnclip chr22.fa -b chr22.cov.bed \\"
+echo "  hmcnc chr22.fa -b chr22.cov.bed \\"
 echo "    --wg-mean <mean> --wg-var <var> \\"
 echo "    --wg-clip-mean <clip_mean> --wg-clip-var <clip_var> \\"
 echo "    -o chr22.vcf"

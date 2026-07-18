@@ -24,4 +24,4 @@ WORKDIR /app/src
 RUN make
 
 # Set the command to run the program
-ENTRYPOINT ["conda", "run", "-n", "hmcnc", "./hmcnclip"]
+ENTRYPOINT ["conda", "run", "-n", "hmcnc", "./hmcnc"]
